@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
 
@@ -24,6 +25,15 @@ if sys.executable.endswith('pythonw.exe'):
 """
 
 DEFAULT_PYTHON_DIST_DIR_NAME = "python"
+
+
+@dataclass
+class App:
+    path: Path
+    exe_file_path: Path
+    source_dir_path: Path
+    pydist_dir_path: Path
+    requirements_file_path: Union[Path, None]
 
 
 def execute_os_command(command: str, cwd: str = None) -> None:
@@ -209,7 +219,7 @@ def make_startup_exe(
     pydist_dir_path: Path,
     build_source_dir_path: Path,
     icon_file_path: Union[Path, None],
-) -> None:
+) -> Path:
     """Make the startup exe file needed to run the script"""
     print("Making startup exe file")
 
@@ -241,6 +251,8 @@ def make_startup_exe(
             )
 
     print("Exe file generated")
+
+    return exe_file_path
 
 
 def download_file(
@@ -408,10 +420,13 @@ def build(
     install_pip(pydist_dir_path=pydist_dir_path)
 
     if copy_requirements:
+        copied_requirements_file_path = requirements_file_path
         requirements_file_path = copy_requirements_file(
             requirements_file_path=requirements_file_path,
             build_dir_path=build_dir_path,
         )
+    else:
+        copied_requirements_file_path = None
     install_requirements(
         build_dir_path=build_dir_path,
         pydist_dir_path=pydist_dir_path,
@@ -419,7 +434,7 @@ def build(
         extra_pip_install_args=extra_pip_install_args,
     )
 
-    make_startup_exe(
+    exe_file_path = make_startup_exe(
         main_file_name=main_file_name,
         show_console=show_console,
         build_dir_path=build_dir_path,
@@ -431,4 +446,12 @@ def build(
     print(
         f"\n\nFinished! Folder `{build_dir_path}` "
         "contains your runnable application!\n\n"
+    )
+
+    return App(
+        path=build_dir_path,
+        exe_file_path=exe_file_path,
+        source_dir_path=build_source_dir_path,
+        pydist_dir_path=pydist_dir_path,
+        requirements_file_path=copied_requirements_file_path,
     )

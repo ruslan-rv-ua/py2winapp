@@ -15,4 +15,4 @@ options = dict(
     # extra_pip_install_args = ...
 )
 
-build(**options)
+app = build(**options)
