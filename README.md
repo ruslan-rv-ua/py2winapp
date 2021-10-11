@@ -42,11 +42,22 @@ TODO: description
     ```python
     exe = app.exe_file_path
     exe = exe.rename(exe.with_name('run.exe'))
-    from py2winapp import zip
-    zip(app.app_path, app.project_path / 'program.zip')
+    py2winapp.zip(app.app_path, app.project_path / 'program.zip')
     ```
 
 1. Run `build.py`:
 
     `python build.py`
 
+## `build()` parameters
+
+|parameter|type|default value|description|
+|-|-|-|-|
+|`main_file_name`|`str`|***required***|The entry point of the application|
+|`python_version`|`str`|***required***|Embedded python version|
+|`show_console`|`bool`|`False`|Show console window or not|
+|`input_dir`|`str`/`Path`/`None`|`None`|The directory to get the `main_file_name` file from. If `None` then use project's directory|
+|||||
+|||||
+|||||
+|||||
