@@ -240,11 +240,13 @@ def make_startup_exe(
                 errors="surrogateescape",
             )
 
-    print("Done!")
+    print("Exe file generated")
 
 
-def download_file(url: str, local_file_path: Path, chunk_size: int = 128):
-    """Download streaming a file url to save_path"""
+def download_file(
+    url: str, local_file_path: Path, chunk_size: int = 128
+) -> None:
+    """Download streaming a file url to `local_file_path`"""
 
     r = requests.get(url, stream=True)
     with open(local_file_path, "wb") as fd:
@@ -326,6 +328,7 @@ def build(
     input_dir: Union[str, Path] = None,
     ignore_patterns: list[str] = None,
     requirements_file: Union[str, Path] = None,
+    copy_requirements: bool = False,
     build_dir: Union[str, Path] = None,
     icon_file: Union[str, Path] = None,
     download_dir: Union[str, Path] = None,
@@ -376,12 +379,7 @@ def build(
     else:
         build_source_dir_path = build_dir_path / build_source_sub_dir_name
 
-    # Calling all funcs needed and processing options
-    getpippy_file_path = download_getpippy(download_dir_path=download_dir_path)
-    embeded_file_path = download_python_dist(
-        download_dir_path=download_dir_path, python_version=python_version
-    )
-
+    # all magic goes here
     make_empty_build_dir(build_dir_path=build_dir_path)
 
     copy_source_files(
@@ -390,10 +388,13 @@ def build(
         ignore_patterns=ignore_patterns,
     )
 
+    getpippy_file_path = download_getpippy(download_dir_path=download_dir_path)
+    embeded_file_path = download_python_dist(
+        download_dir_path=download_dir_path, python_version=python_version
+    )
     extract_embeded_zip_file_to_pydist_dir(
         embedded_file_path=embeded_file_path, pydist_dir_path=pydist_dir_path
     )
-
     copy_getpippy_to_pydist_dir(
         getpippy_file_path=getpippy_file_path, pydist_dir_path=pydist_dir_path
     )
@@ -406,14 +407,15 @@ def build(
 
     install_pip(pydist_dir_path=pydist_dir_path)
 
-    build_requirements_file_path = copy_requirements_file(
-        requirements_file_path=requirements_file_path,
-        build_dir_path=build_dir_path,
-    )
+    if copy_requirements:
+        requirements_file_path = copy_requirements_file(
+            requirements_file_path=requirements_file_path,
+            build_dir_path=build_dir_path,
+        )
     install_requirements(
         build_dir_path=build_dir_path,
         pydist_dir_path=pydist_dir_path,
-        requirements_file_path=build_requirements_file_path,
+        requirements_file_path=requirements_file_path,
         extra_pip_install_args=extra_pip_install_args,
     )
 
