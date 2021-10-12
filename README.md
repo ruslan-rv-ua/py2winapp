@@ -6,15 +6,15 @@ TODO: description
 
 ## Usage
 
-1. install dev dependencies:
+1. Install dev dependencies:
 
     `pip install gen-exe requests`
 
-    or using `poetry`:
+    Using `poetry`:
 
     `poetry add gen-exe requests --dev`
 
-1. Make file with requirements
+1. Make file with requirements:
 
     `pip freeze > prod_requirements.txt`
 
@@ -32,8 +32,8 @@ TODO: description
     import py2winapp
 
     app = py2winapp.build(
-        main_file_name="main.py",  # your app's main py-file
-        python_version="3.9.7",  # python version
+        main_file_name="main.py",
+        python_version="3.9.7",
     )    
     ```
 
@@ -49,15 +49,54 @@ TODO: description
 
     `python build.py`
 
-## `build()` parameters
+## `build()`
+
+### Parameters
 
 |parameter|type|default value|description|
 |-|-|-|-|
-|`main_file_name`|`str`|***required***|The entry point of the application|
 |`python_version`|`str`|***required***|Embedded python version|
+|`input_dir`|`str`|`''`|The directory to get the `main_file_name` file from. If `None` then use project's root|
+|`main_file_name`|`str`|***required***|The entry point of the application|
+|`ignore_input`|`Iterable[str]`|`()`|Patterns to ignore files/directories when coping source directory.|
 |`show_console`|`bool`|`False`|Show console window or not|
-|`input_dir`|`str`/`Path`/`None`|`None`|The directory to get the `main_file_name` file from. If `None` then use project's directory|
-|||||
-|||||
-|||||
-|||||
+|`requirements_file`|`str`|`'requirements.txt'`|Name of requirements file.|
+|`build_dir`|`str`|`'dist'`|The directory in which the stand-alone distribution will be created.|
+|`build_pydist_dir`|`str`|`'pydist'`|A sub directory relative to `build_dir` where the stand-alone python app will be installed.|
+|`build_source_dir`|`str`|`''`|A sub directory relative to `build_dir` where to execute python files will be installed.|
+|`extra_pip_install_args`|`Iterable[str]`|`()`|arguments to be appended to the `pip install` command during installation of the stand-alone app.|
+|`icon_file`|`str`&#124;`Path`&#124;`None`|`None`|Path to icon file to use for your app executable. Don't use one if `None` by default.|
+|`download_dir`|`str`&#124;`Path`&#124;`None`|`None`|Direcotry where to download files. `Users\<username>\Downloads\` if `None`.|
+
+
+### Returns
+
+TODO
+
+## Examples
+
+1. Clone this repo:
+
+    `git clone https://github.com/ruslan-rv-ua/py2winapp`
+
+1. Install dependencies:
+
+    `pip install gen-exe requests`
+
+1. Execute any of `example_build_*.py`:
+
+    ```
+    cd py2winapp
+    python example_build_flask-desktop.py
+    ```
+
+    `flask-desktop` directory 
+    with ready-to-run app 
+    and `flask-desktop.zip` 
+    with zipped app 
+    will be created.
+
+## Credits
+
+- inspired by [ClimenteA/pyvan](https://github.com/ClimenteA/pyvan#readme)
+- some examples got from [ClimenteA/flaskwebgui](https://github.com/ClimenteA/flaskwebgui)
