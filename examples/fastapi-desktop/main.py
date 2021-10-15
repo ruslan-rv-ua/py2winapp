@@ -1,9 +1,13 @@
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import FastAPI
 from flaskwebgui import FlaskUI
+
+os.chdir(os.path.dirname(__file__))
 
 app = FastAPI()
 

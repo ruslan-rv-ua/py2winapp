@@ -38,18 +38,19 @@ DEFAULT_PYDIST_DIR: str = "pydist"
 
 @dataclass
 class Build:
-    app_dir_path: Path
-    exe_file_path: Path
-    project_dir_path: Path
-    source_dir_path: Path
-    pydist_dir_path: Path
-    requirements_file_path: Path
+    project_path: Path
+    build_path: Path
+    exe_path: Path
+    source_path: Path
+    python_path: Path
+    requirements_path: Path
 
     def rename_exe_file(self, new_file_name: str) -> Path:
-        self.exe_file_path = self.exe_file_path.rename(
-            self.exe_file_path.with_stem(new_file_name)
-        )
-        return self.exe_file_path
+        new_exe_path = self.exe_path.with_stem(new_file_name)
+        print(f"Renaming {self.exe_path} -> {new_exe_path}")
+        self.exe_path = self.exe_path.rename(new_exe_path)
+        print("Done.\n")
+        return self.exe_path
 
     def make_zip(
         self, file_name: str, destination_dir: Union[str, Path, None] = None
@@ -57,14 +58,22 @@ class Build:
         if destination_dir is not None:
             zip_file_path = Path(destination_dir) / file_name
         else:
-            zip_file_path = self.project_dir_path / file_name
+            zip_file_path = self.project_path / file_name
+        print(f"Making zip archive {zip_file_path}")
         shutil.make_archive(
             base_name=str(zip_file_path),
             format="zip",
-            root_dir=str(self.project_dir_path),
-            base_dir=str(self.app_dir_path.relative_to(self.project_dir_path)),
+            root_dir=str(self.project_path),
+            base_dir=str(self.build_path.relative_to(self.project_path)),
         )
+        print("Done.\n")
         return zip_file_path
+
+    def remove_build_dir(self) -> None:
+        print("Removing build folder!")
+        shutil.rmtree(self.build_path)
+        self.build_path = self.source_path = self.python_path = None
+        print("Done\n")
 
 
 def execute_os_command(command: str, cwd: str = None) -> str:
@@ -92,6 +101,7 @@ def execute_os_command(command: str, cwd: str = None) -> str:
 
     if exit_code == 0:
         print(output)
+        print("Done!\n")
         return output
     else:
         raise Exception(command, exit_code, output)
@@ -116,13 +126,10 @@ def copy_source_files(
         ignore=shutil.ignore_patterns(*ignore_patterns),
         dirs_exist_ok=True,
     )
-    print("Files copied!")
+    print("Done!\n")
 
 
 def unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
-    if not destination_dir_path.exists():
-        destination_dir_path.mkdir()
-
     with zipfile.ZipFile(zip_file_path, "r") as zip_file:
         zip_file.extractall(destination_dir_path)
 
@@ -135,21 +142,23 @@ def extract_embedded_zip_file_to_pydist_dir(
     unzip(
         zip_file_path=embedded_file_path, destination_dir_path=pydist_dir_path
     )
-    print("Zip file extracted!")
+    print("Done!\n")
 
 
 def copy_getpippy_to_pydist_dir(
     getpippy_file_path: Path, pydist_dir_path: Path
 ) -> None:
     """Copy `get-pip.py` file to build folder"""
+    print(f"Coping `{getpippy_file_path}` file to `{pydist_dir_path}`")
     shutil.copy2(getpippy_file_path, pydist_dir_path)
-    print(f"File `{getpippy_file_path}` file copied to `{pydist_dir_path}`")
+    print("Done!\n")
 
 
 def prepare_for_pip_install(
     python_version: str,
     build_dir_path: Path,
     pydist_dir_path: Path,
+    build_source_dir_path: Path,
 ) -> None:
     """
     Prepare the extracted embedded python version for pip installation
@@ -167,9 +176,13 @@ def prepare_for_pip_install(
     pth_file_path = pydist_dir_path / pth_file_name
     pythonzip_file_path = pydist_dir_path / pythonzip_file_name
 
-    relative_path_to_source = (
-        "." if pydist_dir_path == build_dir_path else ".."
-    )  # TODO: remove + build_source_dir_path.name
+    print(f"Generating `{pth_file_path}` with uncommented `import site` line")
+
+    if pydist_dir_path == build_dir_path:
+        relative_path_to_source = "."
+    else:
+        relative_path_to_source = ".."
+    relative_path_to_source += f"\\{build_source_dir_path.name}"
 
     pth_file_content = (
         f"{pythonzip_file_name}\n"
@@ -178,18 +191,16 @@ def prepare_for_pip_install(
         + "import site\n"
     )
     pth_file_path.write_text(pth_file_content, encoding="utf8")
-    print(
-        f"File `{pth_file_path}` with uncommented `import site` line generated"
-    )
+    print("Done!\n")
 
-    print(f"Extracting `{pythonzip_file_path}`")
     pythonzip_dir_path = Path(pythonzip_file_path)
+    print(f"Extracting `{pythonzip_file_path}` to `{pythonzip_dir_path}`")
     pythonzip_file_path = pythonzip_file_path.rename(
         pythonzip_file_path.with_suffix(".temp_zip")
     )
     unzip(pythonzip_file_path, pythonzip_dir_path)
     pythonzip_file_path.unlink()
-    print(f"`{pythonzip_dir_path}` created")
+    print("Done!\n")
 
 
 def install_pip(pydist_dir_path: Path) -> None:
@@ -200,7 +211,6 @@ def install_pip(pydist_dir_path: Path) -> None:
     )
     if not (pydist_dir_path / "Scripts").exists():
         raise RuntimeError("Can not install `pip` with `get-pip.py`!")
-    print("`pip` installed")
 
 
 def install_requirements(
@@ -215,6 +225,8 @@ def install_requirements(
     pass these additional arguments to the pip install command
     """
 
+    print("Installing requirements")
+
     scripts_dir_path = pydist_dir_path / "Scripts"
 
     if extra_pip_install_args:
@@ -228,20 +240,24 @@ def install_requirements(
             + f"-r {str(requirements_file_path)}{extra_args_str}"
         )
         execute_os_command(command=cmd, cwd=str(scripts_dir_path))
+        print("Done!\n")
     except Exception:
         print("Installing modules one by one")
         modules = requirements_file_path.read_text().splitlines()
         for module in modules:
             try:
+                print(f"Installing {module} ...", end="", flush=True)
                 cmd = "pip3.exe install --no-cache-dir "
                 f"--no-warn-script-location {module}{extra_args_str}"
                 execute_os_command(command=cmd, cwd=str(scripts_dir_path))
+                print("done")
             except Exception:
                 print("FAILED TO INSTALL ", module)
                 with (build_dir_path / "FAILED_TO_INSTALL_MODULES.txt").open(
                     mode="a"
                 ) as f:
                     f.write(module + "\n")
+            print("\n")
 
 
 def make_startup_exe(
@@ -253,7 +269,6 @@ def make_startup_exe(
     icon_file_path: Union[Path, None],
 ) -> Path:
     """Make the startup exe file needed to run the script"""
-    print("Making startup exe file")
 
     relative_pydist_dir = pydist_dir_path.relative_to(build_dir_path)
     relative_source_dir = build_source_dir_path.relative_to(build_dir_path)
@@ -263,6 +278,7 @@ def make_startup_exe(
         f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
         + f"{{EXE_DIR}}\\{relative_source_dir}\\{main_file_name}"
     )
+    print(f"Making startup exe file `{exe_file_path}`")
     generate_exe(
         target=exe_file_path,
         command=command_str,
@@ -281,8 +297,6 @@ def make_startup_exe(
                 encoding="utf8",
                 errors="surrogateescape",
             )
-
-    print("Exe file generated")
 
     return exe_file_path
 
@@ -311,8 +325,9 @@ def download_getpippy(download_dir_path: Path) -> Path:
                 f"Could not find `get-pip.py` in {download_dir_path} "
                 "and the download failed"
             )
+        print("Done!\n")
     else:
-        print(f"`get-pip.py` found in `{download_dir_path}`")
+        print(f"`get-pip.py` found in `{download_dir_path}`\n")
 
     return getpippy_file_path
 
@@ -334,6 +349,7 @@ def download_python_dist(download_dir_path: Path, python_version: str):
                 f"Could not find {embedded_file_name}, "
                 "and the download failed"
             )
+        print("Done!\n")
     else:
         print(f"`{embedded_file_name}` found in `{download_dir_path}`")
 
@@ -348,6 +364,7 @@ def make_empty_build_dir(build_dir_path: Path) -> None:
             f"removing contents from `{build_dir_path}`"
         )
         shutil.rmtree(build_dir_path)
+        print("Done!\n")
     build_dir_path.mkdir()
 
 
@@ -355,6 +372,7 @@ def copy_requirements_file(
     requirements_file_path: Path,
     build_dir_path: Path,
 ) -> Path:
+    # TODO: remove this function
     build_requirements_file_path = build_dir_path / "requirements.txt"
     if not requirements_file_path.exists():
         raise FileNotFoundError(
@@ -372,9 +390,9 @@ def build(
     ignore_input: Iterable[str] = (),
     show_console: bool = False,
     requirements_file: str = "requirements.txt",
-    build_dir: str = "dist",
-    build_pydist_dir: str = DEFAULT_PYDIST_DIR,
-    build_source_dir: str = "",
+    app_dir: str = "dist",
+    python_subdir: str = DEFAULT_PYDIST_DIR,
+    source_subdir: str = "",
     extra_pip_install_args: Iterable[str] = (),
     icon_file: Union[str, Path, None] = None,
     download_dir: Union[str, Path] = None,
@@ -390,9 +408,9 @@ def build(
     project_path = Path(__file__).parent
     input_dir_path = project_path / input_dir
     requirements_file_path = project_path / requirements_file
-    build_dir_path = project_path / build_dir
-    pydist_dir_path = build_dir_path / build_pydist_dir
-    build_source_dir_path = build_dir_path / build_source_dir
+    app_dir_path = project_path / app_dir
+    python_subdir_path = app_dir_path / python_subdir
+    source_subdir_path = app_dir_path / source_subdir
     if icon_file is None:
         icon_file_path = None
     else:
@@ -403,12 +421,12 @@ def build(
         download_dir_path = Path(download_dir).resolve().absolute()
 
     # all magic goes here
-    make_empty_build_dir(build_dir_path=build_dir_path)
+    make_empty_build_dir(build_dir_path=app_dir_path)
 
     copy_source_files(
         input_dir_path=input_dir_path,
-        source_dir_path=build_source_dir_path,
-        build_dir_name=build_dir_path.name,
+        source_dir_path=source_subdir_path,
+        build_dir_name=app_dir_path.name,
         ignore_patterns=list(ignore_input),
     )
 
@@ -417,26 +435,29 @@ def build(
         download_dir_path=download_dir_path, python_version=python_version
     )
     extract_embedded_zip_file_to_pydist_dir(
-        embedded_file_path=embedded_file_path, pydist_dir_path=pydist_dir_path
+        embedded_file_path=embedded_file_path,
+        pydist_dir_path=python_subdir_path,
     )
 
     # download `get_pip.py` and copy it to build directory
     getpippy_file_path = download_getpippy(download_dir_path=download_dir_path)
     copy_getpippy_to_pydist_dir(
-        getpippy_file_path=getpippy_file_path, pydist_dir_path=pydist_dir_path
+        getpippy_file_path=getpippy_file_path,
+        pydist_dir_path=python_subdir_path,
     )
 
     prepare_for_pip_install(
         python_version=python_version,
-        build_dir_path=build_dir_path,
-        pydist_dir_path=pydist_dir_path,
+        build_dir_path=app_dir_path,
+        pydist_dir_path=python_subdir_path,
+        build_source_dir_path=source_subdir_path,
     )
 
-    install_pip(pydist_dir_path=pydist_dir_path)
+    install_pip(pydist_dir_path=python_subdir_path)
 
     install_requirements(
-        build_dir_path=build_dir_path,
-        pydist_dir_path=pydist_dir_path,
+        build_dir_path=app_dir_path,
+        pydist_dir_path=python_subdir_path,
         requirements_file_path=requirements_file_path,
         extra_pip_install_args=list(extra_pip_install_args),
     )
@@ -444,22 +465,22 @@ def build(
     exe_file_path = make_startup_exe(
         main_file_name=main_file_name,
         show_console=show_console,
-        build_dir_path=build_dir_path,
-        pydist_dir_path=pydist_dir_path,
-        build_source_dir_path=build_source_dir_path,
+        build_dir_path=app_dir_path,
+        pydist_dir_path=python_subdir_path,
+        build_source_dir_path=source_subdir_path,
         icon_file_path=icon_file_path,
     )
 
     print(
-        f"\n\nFinished! Folder `{build_dir_path}` "
-        "contains your runnable application!\n\n"
+        f"\nBuild done! Folder `{app_dir_path}` "
+        "contains your runnable application!\n"
     )
 
     return Build(
-        app_dir_path=build_dir_path,
-        exe_file_path=exe_file_path,
-        project_dir_path=project_path,
-        source_dir_path=build_source_dir_path,
-        pydist_dir_path=pydist_dir_path,
-        requirements_file_path=requirements_file_path,
+        build_path=app_dir_path,
+        exe_path=exe_file_path,
+        project_path=project_path,
+        source_path=source_subdir_path,
+        python_path=python_subdir_path,
+        requirements_path=requirements_file_path,
     )
