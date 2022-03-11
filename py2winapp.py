@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Union
 
