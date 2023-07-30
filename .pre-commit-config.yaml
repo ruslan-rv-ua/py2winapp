@@ -13,14 +13,6 @@ repos:
   - id: black
     args: ["--config=pyproject.toml", "py2winapp"]
 
-# pycln - remove unused import statements
-- repo: https://github.com/hadialqattan/pycln
-  rev: 'v2.1.6'
-  hooks:
-  - id: pycln
-    # args: ['.', "--all"]
-    args: [--config=pyproject.toml]
-
 # isort
 - repo: https://github.com/pycqa/isort
   rev: 5.12.0
@@ -38,5 +30,3 @@ repos:
     # args: [--strict, --ignore-missing-imports]
     # entry: poetry run mypy
     # args: ['--config-file', 'pyproject.toml']
-
-

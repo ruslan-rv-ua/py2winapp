@@ -6,6 +6,8 @@ authors = ["Ruslan Iskov <ruslan.rv.ua@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
+[tool.poetry_bumpversion.file."py2winapp/__init__.py"]
+
 [tool.poetry.dependencies]
 python = "^3.10"
 
@@ -42,21 +44,9 @@ exclude = '''
 # mypy configs
 [mypy]
 python_version = 3.10
-strict = false
+# strict = false
 # follow_imports = skip
 # follow_imports_for_stubs = false
-
-# pycln configs
-[tool.pycln]
-path = "fbgram"
-# include=".*_util\.py$"
-# exclude=".*_test\.py$"
-expand_stars=true
-verbose=true
-diff=true
-all=true
-no_gitignore=false
-disable_all_dunder_policy=false
 
 # isort configs
 [tool.isort]
