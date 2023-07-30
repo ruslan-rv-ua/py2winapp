@@ -10,6 +10,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+gen-exe = "^0.2.1"
+requests = "^2.31.0"
 
 
 [tool.poetry.group.dev.dependencies]
