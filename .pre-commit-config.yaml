@@ -1,0 +1,42 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.3.0
+  hooks:
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+
+# black
+- repo: https://github.com/psf/black
+  rev: 22.10.0
+  hooks:
+  - id: black
+    args: ["--config=pyproject.toml", "py2winapp"]
+
+# pycln - remove unused import statements
+- repo: https://github.com/hadialqattan/pycln
+  rev: 'v2.1.6'
+  hooks:
+  - id: pycln
+    # args: ['.', "--all"]
+    args: [--config=pyproject.toml]
+
+# isort
+- repo: https://github.com/pycqa/isort
+  rev: 5.12.0
+  hooks:
+  - id: isort
+    files: "\\.(py)$"
+    args: [--settings-path=pyproject.toml]
+
+# mypy
+# - repo: https://github.com/pre-commit/mirrors-mypy
+#   rev: ''
+#   hooks:
+#   - id: mypy
+    # additional_dependencies: [tokenize-rt==3.2.0]
+    # args: [--strict, --ignore-missing-imports]
+    # entry: poetry run mypy
+    # args: ['--config-file', 'pyproject.toml']
+
+

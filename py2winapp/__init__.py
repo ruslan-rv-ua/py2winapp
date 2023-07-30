@@ -1,0 +1,1 @@
+print("hello from py2winapp/__init__.py")

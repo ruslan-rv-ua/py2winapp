@@ -1,0 +1,63 @@
+[tool.poetry]
+name = "py2winapp"
+version = "0.1.0"
+description = "Make runnable apps from your python scripts!"
+authors = ["Ruslan Iskov <ruslan.rv.ua@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.4.1"
+pre-commit = "^3.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+/(
+        \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.nox
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
+
+# mypy configs
+[mypy]
+python_version = 3.10
+strict = false
+# follow_imports = skip
+# follow_imports_for_stubs = false
+
+# pycln configs
+[tool.pycln]
+path = "fbgram"
+# include=".*_util\.py$"
+# exclude=".*_test\.py$"
+expand_stars=true
+verbose=true
+diff=true
+all=true
+no_gitignore=false
+disable_all_dunder_policy=false
+
+# isort configs
+[tool.isort]
+line_length = 88
