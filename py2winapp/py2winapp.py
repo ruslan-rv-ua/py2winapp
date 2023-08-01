@@ -4,11 +4,8 @@ This script is used to create a Windows executable from a Python script.
 
 TODO:
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
-- use pythonw.exe to hide
 - add support for pyproject.toml
-- add logging
 - add app_name and app_version to BuildData
-- add requirements installation from requirements.txt
 
 """
 import os
@@ -52,7 +49,7 @@ DEFAULT_IGNORE_PATTERNS = [
 ]
 
 DEFAULT_DIST_DIR = "dist2"  #! debug only
-DEFAULT_PYDIST_DIR = "pydist"
+DEFAULT_PYDIST_DIR = "python"
 DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
 
 
@@ -88,6 +85,7 @@ def setup_logger(log_dir_path: Path) -> None:
 class BuildData:
     python_version: str
     project_path: Path
+    dist_dir_path: Path
     input_source_dir: str
     input_source_dir_path: Path
     main_file: str
@@ -98,10 +96,10 @@ class BuildData:
     requirements_file: str
     requirements_file_path: Path
     extra_pip_install_args: Iterable[str]
-    python_subdir: str
-    python_subdir_path: Path
-    source_subdir: str
-    source_subdir_path: Path
+    python_dir: str
+    python_dir_path: Path
+    source_dir: str
+    source_dir_path: Path
     exe_file_without_extension: str
     exe_file_path: Path
     icon_file_path: Union[Path, None]
@@ -118,8 +116,8 @@ def make_build_data(
     show_console: bool,
     requirements_file: str,
     extra_pip_install_args: Iterable[str],
-    python_subdir: str,
-    source_subdir: str,
+    python_dir: str,
+    source_dir: str,
     exe_file_without_extension: Union[str, None],
     icon_file: Union[str, Path, None],
     make_zip: bool,
@@ -134,6 +132,8 @@ def make_build_data(
     if not project_path.exists() or not project_path.is_dir():
         raise ValueError(f"Project path `{project_path}` does not exist.")
 
+    dist_dir_path = project_path / DEFAULT_DIST_DIR
+
     input_source_dir_path = project_path / input_source_dir
     if not input_source_dir_path.exists() or not input_source_dir_path.is_dir():
         raise ValueError(f"Input directory `{input_source_dir_path}` does not exist.")
@@ -144,7 +144,7 @@ def make_build_data(
 
     if app_dir is None:
         app_dir = project_path.name
-    app_dir_path = project_path / DEFAULT_DIST_DIR / app_dir  # e.g. dist\app_dir
+    app_dir_path = dist_dir_path / app_dir  # e.g. dist\app_dir
 
     requirements_file_path = project_path / requirements_file
     if not requirements_file_path.exists():
@@ -152,8 +152,8 @@ def make_build_data(
             f"Requirements file `{requirements_file_path}` does not exist."
         )
 
-    python_subdir_path = app_dir_path / python_subdir
-    source_subdir_path = app_dir_path / source_subdir
+    python_dir_path = app_dir_path / python_dir
+    source_dir_path = app_dir_path / source_dir
 
     if icon_file is not None:
         icon_file_path = Path(icon_file)
@@ -178,6 +178,7 @@ def make_build_data(
     return BuildData(
         python_version=python_version,
         project_path=project_path,
+        dist_dir_path=dist_dir_path,
         input_source_dir=input_source_dir,
         input_source_dir_path=input_source_dir_path,
         main_file=main_file,
@@ -188,10 +189,10 @@ def make_build_data(
         requirements_file=requirements_file,
         requirements_file_path=requirements_file_path,
         extra_pip_install_args=extra_pip_install_args,
-        python_subdir=python_subdir,
-        python_subdir_path=python_subdir_path,
-        source_subdir=source_subdir,
-        source_subdir_path=source_subdir_path,
+        python_dir=python_dir,
+        python_dir_path=python_dir_path,
+        source_dir=source_dir,
+        source_dir_path=source_dir_path,
         exe_file_without_extension=exe_file_without_extension,
         exe_file_path=exe_file_path,
         icon_file_path=icon_file_path,
@@ -216,8 +217,8 @@ def build(
     show_console: bool = False,  # show console or not when running the app
     requirements_file: str = "requirements.txt",
     extra_pip_install_args: Iterable[str] = (),  # extra arguments to pip install
-    python_subdir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
-    source_subdir: str = "",  # where to put source files (relative to app_dir)
+    python_dir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
+    source_dir: str = "",  # where to put source files (relative to app_dir)
     exe_file_without_extension: Union[
         str, None
     ] = None,  # name of the exe file without extension. If None, use the name of the main file #! TODO: or use the name of the app_dir
@@ -233,8 +234,8 @@ def build(
         show_console=show_console,
         requirements_file=requirements_file,
         extra_pip_install_args=extra_pip_install_args,
-        python_subdir=python_subdir,
-        source_subdir=source_subdir,
+        python_dir=python_dir,
+        source_dir=source_dir,
         exe_file_without_extension=exe_file_without_extension,
         icon_file=icon_file,
         make_zip=make_zip,
@@ -244,12 +245,12 @@ def build(
     setup_logger(log_dir_path=build_data.project_path)
 
     # create or clean app directory
-    make_app_dir(app_dir_path=build_data.app_dir_path)
+    make_app_dir(build_data=build_data)
 
     # copy source files
     copy_source_files(
         input_source_dir_path=build_data.input_source_dir_path,
-        source_dir_path=build_data.source_subdir_path,
+        source_dir_path=build_data.source_dir_path,
         build_dir_name=build_data.app_dir_path.name,
         ignore_patterns=list(ignore_input),
     )
@@ -264,16 +265,16 @@ def build(
     prepare_for_pip_install(
         python_version=python_version,
         app_dir_path=build_data.app_dir_path,
-        pydist_dir_path=build_data.python_subdir_path,
-        build_source_dir_path=build_data.source_subdir_path,
+        pydist_dir_path=build_data.python_dir_path,
+        build_source_dir_path=build_data.source_dir_path,
     )
 
     # install pip
-    install_pip(pydist_dir_path=build_data.python_subdir_path)
+    install_pip(pydist_dir_path=build_data.python_dir_path)
 
     # delete `get_pip.py` from build directory cause it waists more than 2.5MB
     # getpippy_file_path.unlink() #! TODO: chore - romove this line
-    (build_data.python_subdir_path / GETPIPPY_FILE).unlink()
+    (build_data.python_dir_path / GETPIPPY_FILE).unlink()
 
     # install requirements
     install_requirements_from_file(build_data=build_data)
@@ -283,12 +284,7 @@ def build(
 
     # make zip file
     if make_zip:
-        make_zip_file(
-            file_name=build_data.app_dir,
-            destination_dir=build_data.app_dir_path.parent,
-            project_path=build_data.project_path,
-            app_path=build_data.app_dir_path,
-        )
+        make_zip_file(build_data=build_data)
 
     logger.success(f"Done building `{build_data.app_dir_path}`")
 
@@ -300,17 +296,14 @@ def build(
 ######################################################################
 
 
-def make_app_dir(app_dir_path: Path) -> None:
+def make_app_dir(build_data: BuildData) -> None:
     logger.info(f"Creating app directory")
-    dist_dir_path = app_dir_path.parent
-    assert dist_dir_path.name == DEFAULT_DIST_DIR, f'Expected "{dist_dir_path}"'
-    if dist_dir_path.is_dir():
-        logger.debug(
-            f"Existing dist directory found, removing contents from `{dist_dir_path}`"
-        )
-        shutil.rmtree(dist_dir_path)
-    dist_dir_path.mkdir()
-    app_dir_path.mkdir()
+    if build_data.dist_dir_path.is_dir():
+        logger.debug(f"Deleting existing dist directory `{build_data.dist_dir_path}`!")
+        shutil.rmtree(build_data.dist_dir_path)
+    logger.debug(f"Creating app directory `{build_data.app_dir_path}`!")
+    build_data.dist_dir_path.mkdir()
+    build_data.app_dir_path.mkdir()
 
 
 def copy_source_files(
@@ -347,11 +340,11 @@ def get_python_dist(build_data: BuildData) -> Path:
     )
     # extract python zip file to build folder
     logger.debug(
-        f"Extracting `{downloaded_python_zip_path}` to `{build_data.python_subdir_path}`"
+        f"Extracting `{downloaded_python_zip_path}` to `{build_data.python_dir_path}`"
     )
     unzip(
         zip_file_path=downloaded_python_zip_path,
-        destination_dir_path=build_data.python_subdir_path,
+        destination_dir_path=build_data.python_dir_path,
     )
     return downloaded_python_zip_path
 
@@ -360,7 +353,7 @@ def get_getpippy(build_data: BuildData) -> Path:
     logger.info(f"Downloading `get-pip.py`")
     downloader = Dwwnloader(build_data.download_dir_path)
     getpippy_file_path = downloader.download(file=GETPIPPY_FILE, url=GETPIPPY_URL)
-    shutil.copy2(getpippy_file_path, build_data.python_subdir_path)
+    shutil.copy2(getpippy_file_path, build_data.python_dir_path)
     return getpippy_file_path
 
 
@@ -445,7 +438,7 @@ def install_requirements_from_file(build_data: BuildData) -> None:
         )
     else:
         extra_args_str = ""
-    scripts_dir_path = build_data.python_subdir_path / "Scripts"
+    scripts_dir_path = build_data.python_dir_path / "Scripts"
     command = (
         "pip3.exe install --no-cache-dir --no-warn-script-location "
         f"-r {str(build_data.requirements_file_path)}{extra_args_str}"
@@ -482,7 +475,7 @@ def install_requirements_one_by_one(
         )
     else:
         extra_args_str = ""
-    scripts_dir_path = build_data.python_subdir_path / "Scripts"
+    scripts_dir_path = build_data.python_dir_path / "Scripts"
     failed_to_install_modules = []
     for module in reqauirements:
         logger.info(f"Installing {module} ...")
@@ -508,10 +501,10 @@ def make_startup_exe(build_data: BuildData) -> Path:
     """Make the startup exe file needed to run the script"""
     logger.info(f"Making startup exe file")
 
-    relative_pydist_dir = build_data.python_subdir_path.relative_to(
+    relative_pydist_dir = build_data.python_dir_path.relative_to(
         build_data.app_dir_path
     )
-    relative_source_dir = build_data.source_subdir_path.relative_to(
+    relative_source_dir = build_data.source_dir_path.relative_to(
         build_data.app_dir_path
     )
     exe_file_path = build_data.app_dir_path / Path(
@@ -532,8 +525,6 @@ def make_startup_exe(build_data: BuildData) -> Path:
     )
 
     if not build_data.show_console:
-        #! remove main_file_path = build_source_dir_path / exe_file_without_extension
-        #! remove main_file_path = build_data.source_subdir_path / build_data.main_file
         main_file_path = build_data.main_file_path
         main_file_content = main_file_path.read_text(
             encoding="utf8", errors="surrogateescape"
@@ -548,24 +539,20 @@ def make_startup_exe(build_data: BuildData) -> Path:
     return exe_file_path
 
 
-def make_zip_file(
-    file_name: str,
-    destination_dir: Union[str, Path],
-    project_path: Path,
-    app_path: Path,
-) -> Path:
+def make_zip_file(build_data: BuildData) -> Path:
     logger.info(f"Making zip archive of the app")
 
-    zip_file_name = Path(destination_dir) / file_name
-    root_dir = project_path / DEFAULT_DIST_DIR
-    logger.debug(f"Making zip file `{zip_file_name}`")
+    destination_dir = build_data.dist_dir_path
+    zip_file_path = Path(destination_dir) / build_data.app_dir_path.name
+    root_dir = build_data.dist_dir_path
+    logger.debug(f"Making zip file `{zip_file_path}`")
     shutil.make_archive(
-        base_name=str(zip_file_name),
+        base_name=str(zip_file_path),
         format="zip",
         root_dir=str(root_dir),
-        base_dir=str(app_path.relative_to(root_dir)),
+        base_dir=str(build_data.app_dir_path.relative_to(root_dir)),
     )
-    return zip_file_name
+    return zip_file_path
 
 
 ######################################################################
@@ -647,3 +634,6 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         return output
     else:
         raise Exception(command, exit_code, output)
+
+
+print(f"{__debug__=}")
