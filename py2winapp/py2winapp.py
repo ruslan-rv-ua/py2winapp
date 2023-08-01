@@ -3,11 +3,11 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- use pythonw.exe to hide console
+- add support for pyproject.toml
 - add logging
 - add app_name and app_version to BuildData
 - add requirements installation from requirements.txt
-- add cache for downloaded files
-- add process pyproject.toml
 
 """
 import os
@@ -33,8 +33,10 @@ from py2winapp.downloader import Dwwnloader
 # `x.x.x` where any x may be set to a positive integer.
 PYTHON_VERSION_REGEX = re.compile(r"^(\d+|x)\.(\d+|x)\.(\d+|x)$")
 
-GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
+GETPIPPY_URL = "https://bootstrap.pypa.io/get-pip.py"
+GETPIPPY_FILE = "get-pip.py"
 PYTHON_URL = "https://www.python.org/ftp/python"
+
 HEADER_NO_CONSOLE = """import sys, os
 if sys.executable.endswith('pythonw.exe'):
     sys.stdout = open(os.devnull, 'w')
@@ -188,7 +190,7 @@ def build(
         str, None
     ] = None,  # where to put the app under `dist` directory (relative to project_dir)
     show_console: bool = False,  # show console or not when running the app
-    requirements_file: str = "requirements.txt",  # requirements.txt #! TODO: or pyproject.toml
+    requirements_file: str = "requirements.txt",
     extra_pip_install_args: Iterable[str] = (),  # extra arguments to pip install
     python_subdir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
     source_subdir: str = "",  # where to put source files (relative to app_dir)
@@ -242,8 +244,9 @@ def build(
     # install pip
     install_pip(pydist_dir_path=build_data.python_subdir_path)
 
-    # remove `get_pip.py` cause it waists more than 2.5MB
-    getpippy_file_path.unlink()
+    # delete `get_pip.py` from build directory cause it waists more than 2.5MB
+    # getpippy_file_path.unlink()
+    (build_data.python_subdir_path / GETPIPPY_FILE).unlink()
 
     # install requirements
     install_requirements(
@@ -344,7 +347,7 @@ def get_python_dist(build_data: BuildData) -> Path:
 
 def get_getpippy(build_data: BuildData) -> Path:
     downloader = Dwwnloader(build_data.download_dir_path)
-    getpippy_file_path = downloader.download(file="get-pip.py", url=GET_PIP_URL)
+    getpippy_file_path = downloader.download(file=GETPIPPY_FILE, url=GETPIPPY_URL)
     shutil.copy2(getpippy_file_path, build_data.python_subdir_path)
     return getpippy_file_path
 
@@ -492,7 +495,7 @@ def make_startup_exe(
         show_console=show_console,
     )
 
-    if not show_console:  #! TODO: maybe use pythonw.exe instead of python.exe
+    if not show_console:
         main_file_path = build_source_dir_path / exe_file_without_extension
         main_file_content = main_file_path.read_text(
             encoding="utf8", errors="surrogateescape"
