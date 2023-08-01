@@ -3,10 +3,11 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- use pythonw.exe to hide console
+- add support for pyproject.toml
+- add logging
 - add app_name and app_version to BuildData
 - add requirements installation from requirements.txt
-- add cache for downloaded files
-- add process pyproject.toml
 
 """
 import os
@@ -22,6 +23,8 @@ from typing import Iterable, Union
 import requests
 from genexe.generate_exe import generate_exe
 
+from py2winapp.downloader import Dwwnloader
+
 ######################################################################
 # constants
 ######################################################################
@@ -30,8 +33,10 @@ from genexe.generate_exe import generate_exe
 # `x.x.x` where any x may be set to a positive integer.
 PYTHON_VERSION_REGEX = re.compile(r"^(\d+|x)\.(\d+|x)\.(\d+|x)$")
 
-GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
+GETPIPPY_URL = "https://bootstrap.pypa.io/get-pip.py"
+GETPIPPY_FILE = "get-pip.py"
 PYTHON_URL = "https://www.python.org/ftp/python"
+
 HEADER_NO_CONSOLE = """import sys, os
 if sys.executable.endswith('pythonw.exe'):
     sys.stdout = open(os.devnull, 'w')
@@ -185,7 +190,7 @@ def build(
         str, None
     ] = None,  # where to put the app under `dist` directory (relative to project_dir)
     show_console: bool = False,  # show console or not when running the app
-    requirements_file: str = "requirements.txt",  # requirements.txt #! TODO: or pyproject.toml
+    requirements_file: str = "requirements.txt",
     extra_pip_install_args: Iterable[str] = (),  # extra arguments to pip install
     python_subdir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
     source_subdir: str = "",  # where to put source files (relative to app_dir)
@@ -222,25 +227,11 @@ def build(
         ignore_patterns=list(ignore_input),
     )
 
-    # download python embedded distribution files and extract them to the build directory
-    embedded_python_zip_file_path = download_python_dist(
-        download_dir_path=build_data.download_dir_path, python_version=python_version
-    )
-    extract_python_dist(
-        embedded_python_zip_file_path=embedded_python_zip_file_path,
-        pydist_dir_path=build_data.python_subdir_path,
-    )
+    # download python embedded distribution file and extract it to build directory
+    python_zip_path = get_python_dist(build_data=build_data)
 
     # download `get_pip.py` and copy it to build directory
-    getpippy_file_path = download_getpippy(
-        download_dir_path=build_data.python_subdir_path
-    )
-    #! remove
-    # getpippy_file_path = download_getpippy(download_dir_path=build_data.download_dir_path)
-    # copy_getpippy_to_pydist_dir(
-    #     getpippy_file_path=getpippy_file_path,
-    #     pydist_dir_path=python_subdir_path,
-    # )
+    getpippy_file_path = get_getpippy(build_data=build_data)
 
     # prepare for pip install
     prepare_for_pip_install(
@@ -253,8 +244,9 @@ def build(
     # install pip
     install_pip(pydist_dir_path=build_data.python_subdir_path)
 
-    # remove `get_pip.py` cause it waists more than 2.5MB
-    getpippy_file_path.unlink()
+    # delete `get_pip.py` from build directory cause it waists more than 2.5MB
+    # getpippy_file_path.unlink()
+    (build_data.python_subdir_path / GETPIPPY_FILE).unlink()
 
     # install requirements
     install_requirements(
@@ -334,59 +326,29 @@ def copy_source_files(
     print("Done!\n")
 
 
-def download_python_dist(download_dir_path: Path, python_version: str):
-    print(">>> download_dir_path:", download_dir_path)
-    embedded_file_name = f"python-{python_version}-embed-amd64.zip"
-    embedded_file_path = download_dir_path / embedded_file_name
-    if not embedded_file_path.is_file():
-        print(
-            f"`{embedded_file_name}` not found in `{download_dir_path}`, "
-            "attempting to download it."
-        )
-        download_file(
-            url=f"{PYTHON_URL}/{python_version}/{embedded_file_name}",
-            local_file_path=embedded_file_path,
-        )
-        if not embedded_file_path.is_file():
-            raise RuntimeError(
-                f"Could not find {embedded_file_name}, " "and the download failed"
-            )
-        print("Done!\n")
-    else:
-        print(f"`{embedded_file_name}` found in `{download_dir_path}`")
-
-    return embedded_file_path
-
-
-def extract_python_dist(
-    embedded_python_zip_file_path: Path, pydist_dir_path: Path
-) -> None:
-    """Extract embedded python zip file to build folder"""
-    print(f"Extracting `{embedded_python_zip_file_path}` to `{pydist_dir_path}`")
+def get_python_dist(build_data: BuildData) -> Path:
+    downloader = Dwwnloader(build_data.download_dir_path)
+    python_file_name = f"python-{build_data.python_version}-embed-amd64.zip"  # e.g. python-3.9.6-embed-amd64.zip
+    downloaded_python_zip_path = downloader.download(
+        url=f"{PYTHON_URL}/{build_data.python_version}/{python_file_name}",
+        file=python_file_name,
+    )
+    # extract python zip file to build folder
+    print(
+        f"Extracting `{downloaded_python_zip_path}` to `{build_data.python_subdir_path}`"
+    )
     unzip(
-        zip_file_path=embedded_python_zip_file_path,
-        destination_dir_path=pydist_dir_path,
+        zip_file_path=downloaded_python_zip_path,
+        destination_dir_path=build_data.python_subdir_path,
     )
     print("Done!\n")
+    return downloaded_python_zip_path
 
 
-def download_getpippy(download_dir_path: Path) -> Path:
-    getpippy_file_path = download_dir_path / "get-pip.py"
-    if not getpippy_file_path.exists():
-        print(
-            f"`get-pip.py` not found in `{download_dir_path}`, "
-            "attempting to download it"
-        )
-        download_file(url=GET_PIP_URL, local_file_path=getpippy_file_path)
-        if not getpippy_file_path.exists():
-            raise RuntimeError(
-                f"Could not find `get-pip.py` in {download_dir_path} "
-                "and the download failed"
-            )
-        print("Done!\n")
-    else:
-        print(f"`get-pip.py` found in `{download_dir_path}`\n")
-
+def get_getpippy(build_data: BuildData) -> Path:
+    downloader = Dwwnloader(build_data.download_dir_path)
+    getpippy_file_path = downloader.download(file=GETPIPPY_FILE, url=GETPIPPY_URL)
+    shutil.copy2(getpippy_file_path, build_data.python_subdir_path)
     return getpippy_file_path
 
 
@@ -396,7 +358,6 @@ def download_getpippy(download_dir_path: Path) -> Path:
 # ) -> None:
 #     """Copy `get-pip.py` file to build folder"""
 #     print(f"Coping `{getpippy_file_path}` file to `{pydist_dir_path}`")
-#     shutil.copy2(getpippy_file_path, pydist_dir_path)
 #     print("Done!\n")
 
 
@@ -534,7 +495,7 @@ def make_startup_exe(
         show_console=show_console,
     )
 
-    if not show_console:  #! TODO: maybe use pythonw.exe instead of python.exe
+    if not show_console:
         main_file_path = build_source_dir_path / exe_file_without_extension
         main_file_content = main_file_path.read_text(
             encoding="utf8", errors="surrogateescape"
@@ -588,21 +549,6 @@ def is_valid_python_version(python_version: str) -> bool:
     """
     #! TODO: remove this function
     return re.match(PYTHON_VERSION_REGEX, python_version) is not None
-
-
-def download_file(url: str, local_file_path: Path, chunk_size: int = 128) -> None:
-    """
-    Download a file from a given URL and save it to a local file path.
-
-    Args:
-        url (str): The URL of the file to download.
-        local_file_path (Path): The local file path to save the downloaded file to.
-        chunk_size (int, optional): The size of each chunk to download. Defaults to 128.
-    """
-    r = requests.get(url, stream=True)
-    with open(local_file_path, "wb") as fd:
-        for chunk in r.iter_content(chunk_size=chunk_size):
-            fd.write(chunk)
 
 
 def unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
