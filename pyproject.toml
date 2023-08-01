@@ -18,6 +18,7 @@ requests = "^2.31.0"
 black = "^23.7.0"
 mypy = "^1.4.1"
 pre-commit = "^3.3.3"
+loguru = "^0.7.0"
 
 [build-system]
 requires = ["poetry-core"]
