@@ -3,6 +3,7 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
 - use pythonw.exe to hide console
 - add support for pyproject.toml
 - add logging
@@ -245,16 +246,11 @@ def build(
     install_pip(pydist_dir_path=build_data.python_subdir_path)
 
     # delete `get_pip.py` from build directory cause it waists more than 2.5MB
-    # getpippy_file_path.unlink()
+    # getpippy_file_path.unlink() #! TODO: chore - romove this line
     (build_data.python_subdir_path / GETPIPPY_FILE).unlink()
 
     # install requirements
-    install_requirements(
-        app_dir_path=build_data.app_dir_path,
-        pydist_dir_path=build_data.python_subdir_path,
-        requirements_file_path=build_data.requirements_file_path,
-        extra_pip_install_args=list(extra_pip_install_args),
-    )
+    install_requirements_from_file(build_data=build_data)
 
     # generate exe
     exe_file_path = make_startup_exe(
@@ -281,7 +277,6 @@ def build(
         "contains your runnable application!\n"
     )
 
-    # return build data
     return build_data
 
 
@@ -420,51 +415,78 @@ def install_pip(pydist_dir_path: Path) -> None:
     print("Done!\n")
 
 
-def install_requirements(
-    pydist_dir_path: Path,
-    app_dir_path: Path,
-    requirements_file_path: Path,
-    extra_pip_install_args: list[str],
-):
+def install_requirements_from_file(build_data: BuildData) -> None:
     """
     Install the modules from requirements.txt file
     - extra_pip_install_args (optional `List[str]`) :
     pass these additional arguments to the pip install command
     """
 
-    print("Installing requirements")
+    print(f"Installing requirements from `{build_data.requirements_file_path}`")
 
-    scripts_dir_path = pydist_dir_path / "Scripts"
-
-    if extra_pip_install_args:
-        extra_args_str = " " + " ".join(extra_pip_install_args)
+    if build_data.extra_pip_install_args:
+        extra_args_str = extra_args_str = " " + " ".join(
+            build_data.extra_pip_install_args
+        )
     else:
         extra_args_str = ""
-
+    scripts_dir_path = build_data.python_subdir_path / "Scripts"
+    command = (
+        "pip3.exe install --no-cache-dir --no-warn-script-location "
+        f"-r {str(build_data.requirements_file_path)}{extra_args_str}"
+    )
     try:
-        cmd = (
-            "pip3.exe install --no-cache-dir --no-warn-script-location "
-            + f"-r {str(requirements_file_path)}{extra_args_str}"
+        execute_os_command(command=command, cwd=str(scripts_dir_path))
+        return
+    except Exception as e:
+        print(f"Error: {e}")
+    print(f"Failed to install modules from `{build_data.requirements_file_path}`")
+    print("Trying to install modules one by one")
+    modules = build_data.requirements_file_path.read_text().splitlines()
+    install_requirements_one_by_one(modules, build_data)
+
+
+def install_requirements_one_by_one(
+    reqauirements: list[str], build_data: BuildData
+) -> None:
+    """Install the modules from requirements.txt file
+
+    - extra_pip_install_args (optional `List[str]`) :
+    pass these additional arguments to the pip install command
+
+    Each module is installed one by one.
+    If any module fails to install, it is added to FAILED_TO_INSTALL_MODULES.txt file
+
+    Module example: `requests==2.31.0`
+    """
+    if build_data.extra_pip_install_args:
+        extra_args_str = extra_args_str = " " + " ".join(
+            build_data.extra_pip_install_args
         )
-        execute_os_command(command=cmd, cwd=str(scripts_dir_path))
+    else:
+        extra_args_str = ""
+    scripts_dir_path = build_data.python_subdir_path / "Scripts"
+    failed_to_install_modules = []
+    for module in reqauirements:
+        try:
+            print(f"Installing {module} ...")
+            command = (
+                "pip3.exe install --no-cache-dir --no-warn-script-location "
+                f"{module}{extra_args_str}"
+            )
+            execute_os_command(command=command, cwd=str(scripts_dir_path))
+        except Exception:
+            print("FAILED TO INSTALL ", module)
+            failed_to_install_modules.append(module)
+
+    if failed_to_install_modules:
+        (build_data.app_dir_path / "FAILED_TO_INSTALL_MODULES.txt").write_text(
+            "\n".join(failed_to_install_modules), encoding="utf8"
+        )
+        print(f"Failed to install {len(failed_to_install_modules)} modules")
+        print("See FAILED_TO_INSTALL_MODULES.txt for more info")
+    else:
         print("Done!\n")
-    except Exception:
-        print("Installing modules one by one")
-        modules = requirements_file_path.read_text().splitlines()
-        for module in modules:
-            try:
-                print(f"Installing {module} ...", end="", flush=True)
-                cmd = "pip3.exe install --no-cache-dir "
-                f"--no-warn-script-location {module}{extra_args_str}"
-                execute_os_command(command=cmd, cwd=str(scripts_dir_path))
-                print("done")
-            except Exception:
-                print("FAILED TO INSTALL ", module)
-                with (app_dir_path / "FAILED_TO_INSTALL_MODULES.txt").open(
-                    mode="a"
-                ) as f:
-                    f.write(module + "\n")
-            print("\n")
 
 
 def make_startup_exe(
@@ -578,7 +600,7 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         str: The output of the command.
     """
 
-    print("Running command: ", command)
+    print(f"Executing command {command!r}...")
     process = subprocess.Popen(
         command,
         shell=True,
