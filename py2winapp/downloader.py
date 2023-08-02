@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Union
 
 import requests
+from loguru import logger
 
 
 class Dwwnloader:
@@ -11,9 +11,12 @@ class Dwwnloader:
         self._download_dir_path = download_dir_path
 
     def download(self, url: str, file: str) -> Path:
+        logger.debug(f"Downloading {url} to {file}")
         file_path = self._download_dir_path / file
         if file_path.exists() and file_path.is_file():  # cached
+            logger.debug(f"{file_path} is cached.")
             return file_path
+        logger.debug(f"{file_path} is not cached. Downloading...")
         self._download_file(url, file_path)
         return file_path
 
