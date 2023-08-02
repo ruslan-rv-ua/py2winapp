@@ -3,6 +3,7 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- add ignore input patterns
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
 - add support for pyproject.toml
 - add app_name and app_version to BuildData
@@ -116,7 +117,7 @@ def make_build_data(
     app_name: Union[str, None],
     input_source_dir: str,
     main_file: str,
-    ignore_input: Iterable[str],
+    ignore_input: Iterable[str],  #! TODO: add this
     app_dir: Union[str, None],
     show_console: bool,
     requirements_file: str,
@@ -139,9 +140,13 @@ def make_build_data(
 
     if app_name is None:
         app_name = project_path.name
-    app_name_slug = slugify(app_name)
+    app_name_slug = slugify(app_name, decimal=False)
 
     dist_dir_path = project_path / DEFAULT_DIST_DIR
+
+    if app_dir is None:
+        app_dir = app_name_slug
+    app_dir_path = dist_dir_path / app_dir
 
     input_source_dir_path = project_path / input_source_dir
     if not input_source_dir_path.exists() or not input_source_dir_path.is_dir():
@@ -150,10 +155,6 @@ def make_build_data(
     main_file_path = input_source_dir_path / main_file
     if not main_file_path.exists() or not main_file_path.is_file():
         raise ValueError(f"Main file `{main_file_path}` does not exist.")
-
-    if app_dir is None:
-        app_dir = project_path.name
-    app_dir_path = dist_dir_path / app_dir  # e.g. dist\app_dir
 
     requirements_file_path = project_path / requirements_file
     if not requirements_file_path.exists():
@@ -221,7 +222,7 @@ def make_build_data(
 def build(
     python_version: str,  # python version to use
     input_source_dir: str,  # where the source code is
-    main_file: str,  # main file, e.g. `main.py`
+    main_file: str,  # relative to input_source_dir, the main file to run, e.g. `main.py`
     app_name: Union[
         str, None
     ] = None,  # name of the app. If None, use project's directory name
