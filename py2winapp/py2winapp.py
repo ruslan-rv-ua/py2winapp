@@ -3,6 +3,7 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- add ignore input patterns
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
 - add support for pyproject.toml
 - add app_name and app_version to BuildData
@@ -20,6 +21,7 @@ from typing import Iterable, Union
 
 from genexe.generate_exe import generate_exe
 from loguru import logger
+from slugify import slugify
 
 from py2winapp.downloader import Dwwnloader
 
@@ -48,7 +50,8 @@ DEFAULT_IGNORE_PATTERNS = [
     "build.py",
 ]
 
-DEFAULT_DIST_DIR = "dist2"  #! debug only
+DEFAULT_DIST_DIR = "dist3"  #! debug only
+
 DEFAULT_PYDIST_DIR = "python"
 DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
 
@@ -85,6 +88,8 @@ def setup_logger(log_dir_path: Path) -> None:
 class BuildData:
     python_version: str
     project_path: Path
+    app_name: str
+    app_name_slug: str
     dist_dir_path: Path
     input_source_dir: str
     input_source_dir_path: Path
@@ -109,16 +114,17 @@ class BuildData:
 
 def make_build_data(
     python_version: str,
+    app_name: Union[str, None],
     input_source_dir: str,
     main_file: str,
-    ignore_input: Iterable[str],
+    ignore_input: Iterable[str],  #! TODO: add this
     app_dir: Union[str, None],
     show_console: bool,
     requirements_file: str,
     extra_pip_install_args: Iterable[str],
     python_dir: str,
     source_dir: str,
-    exe_file_without_extension: Union[str, None],
+    exe_file: Union[str, None],
     icon_file: Union[str, Path, None],
     make_zip: bool,
 ) -> BuildData:
@@ -132,7 +138,15 @@ def make_build_data(
     if not project_path.exists() or not project_path.is_dir():
         raise ValueError(f"Project path `{project_path}` does not exist.")
 
+    if app_name is None:
+        app_name = project_path.name
+    app_name_slug = slugify(app_name, decimal=False)
+
     dist_dir_path = project_path / DEFAULT_DIST_DIR
+
+    if app_dir is None:
+        app_dir = app_name_slug
+    app_dir_path = dist_dir_path / app_dir
 
     input_source_dir_path = project_path / input_source_dir
     if not input_source_dir_path.exists() or not input_source_dir_path.is_dir():
@@ -141,10 +155,6 @@ def make_build_data(
     main_file_path = input_source_dir_path / main_file
     if not main_file_path.exists() or not main_file_path.is_file():
         raise ValueError(f"Main file `{main_file_path}` does not exist.")
-
-    if app_dir is None:
-        app_dir = project_path.name
-    app_dir_path = dist_dir_path / app_dir  # e.g. dist\app_dir
 
     requirements_file_path = project_path / requirements_file
     if not requirements_file_path.exists():
@@ -167,17 +177,20 @@ def make_build_data(
     download_dir_path = project_path / DEFAULT_DOWNLOAD_DIR
     download_dir_path.mkdir(exist_ok=True)
 
-    if exe_file_without_extension is None:
-        exe_file_without_extension = main_file_path.stem
-    exe_file_path = app_dir_path / f"{exe_file_without_extension}.exe"
+    if exe_file is None:
+        exe_file = app_name_slug
+    exe_file = exe_file.strip().lower()
+    if not exe_file.endswith(".exe"):
+        exe_file += ".exe"
+    exe_file_path = app_dir_path / exe_file
 
-    zip_file_path = (
-        app_dir_path / f"{exe_file_without_extension}.zip" if make_zip else None
-    )
+    zip_file_path = app_dir_path / f"{exe_file}.zip" if make_zip else None
 
     return BuildData(
         python_version=python_version,
         project_path=project_path,
+        app_name=app_name,
+        app_name_slug=app_name_slug,
         dist_dir_path=dist_dir_path,
         input_source_dir=input_source_dir,
         input_source_dir_path=input_source_dir_path,
@@ -193,7 +206,7 @@ def make_build_data(
         python_dir_path=python_dir_path,
         source_dir=source_dir,
         source_dir_path=source_dir_path,
-        exe_file_without_extension=exe_file_without_extension,
+        exe_file_without_extension=exe_file,
         exe_file_path=exe_file_path,
         icon_file_path=icon_file_path,
         zip_file_path=zip_file_path,
@@ -209,7 +222,10 @@ def make_build_data(
 def build(
     python_version: str,  # python version to use
     input_source_dir: str,  # where the source code is
-    main_file: str,  # main file, e.g. `main.py`
+    main_file: str,  # relative to input_source_dir, the main file to run, e.g. `main.py`
+    app_name: Union[
+        str, None
+    ] = None,  # name of the app. If None, use project's directory name
     ignore_input: Iterable[str] = (),  # patterns to ignore in input_dir
     app_dir: Union[
         str, None
@@ -219,9 +235,9 @@ def build(
     extra_pip_install_args: Iterable[str] = (),  # extra arguments to pip install
     python_dir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
     source_dir: str = "",  # where to put source files (relative to app_dir)
-    exe_file_without_extension: Union[
+    exe_file: Union[
         str, None
-    ] = None,  # name of the exe file without extension. If None, use the name of the main file #! TODO: or use the name of the app_dir
+    ] = None,  # name of the exe file. If None, use app_name_slug
     icon_file: Union[str, Path, None] = None,  # icon file to use for the app
     make_zip: bool = False,  # make a zip file of the app
 ) -> BuildData:
@@ -229,6 +245,7 @@ def build(
         python_version=python_version,
         input_source_dir=input_source_dir,
         main_file=main_file,
+        app_name=app_name,
         ignore_input=ignore_input,
         app_dir=app_dir,
         show_console=show_console,
@@ -236,7 +253,7 @@ def build(
         extra_pip_install_args=extra_pip_install_args,
         python_dir=python_dir,
         source_dir=source_dir,
-        exe_file_without_extension=exe_file_without_extension,
+        exe_file=exe_file,
         icon_file=icon_file,
         make_zip=make_zip,
     )
@@ -497,7 +514,7 @@ def install_requirements_one_by_one(
         logger.error("See FAILED_TO_INSTALL_MODULES.txt for more info")
 
 
-def make_startup_exe(build_data: BuildData) -> Path:
+def make_startup_exe(build_data: BuildData) -> None:
     """Make the startup exe file needed to run the script"""
     logger.info(f"Making startup exe file")
 
@@ -507,18 +524,15 @@ def make_startup_exe(build_data: BuildData) -> Path:
     relative_source_dir = build_data.source_dir_path.relative_to(
         build_data.app_dir_path
     )
-    exe_file_path = build_data.app_dir_path / Path(
-        build_data.exe_file_without_extension
-    ).with_suffix(".exe")
     python_entrypoint = "python.exe" if build_data.show_console else "pythonw.exe"
     logger.debug(f"Python entrypoint: `{python_entrypoint}`")
     command_str = (
         f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
         + f"{{EXE_DIR}}\\{relative_source_dir}\\{build_data.main_file}"
     )
-    logger.debug(f"Making startup exe file `{exe_file_path}`")
+    logger.debug(f"Making startup exe file `{build_data.exe_file_path}`")
     generate_exe(
-        target=exe_file_path,
+        target=build_data.exe_file_path,
         command=command_str,
         icon_file=build_data.icon_file_path,
         show_console=build_data.show_console,
@@ -535,8 +549,6 @@ def make_startup_exe(build_data: BuildData) -> Path:
                 encoding="utf8",
                 errors="surrogateescape",
             )
-
-    return exe_file_path
 
 
 def make_zip_file(build_data: BuildData) -> Path:
@@ -634,6 +646,3 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         return output
     else:
         raise Exception(command, exit_code, output)
-
-
-print(f"{__debug__=}")
