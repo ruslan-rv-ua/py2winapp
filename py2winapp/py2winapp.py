@@ -11,7 +11,6 @@ TODO:
 - add default icon
 - make project path as parameter
 """
-import json
 import os
 import re
 import shutil
@@ -20,7 +19,7 @@ import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Union
 
 from genexe.generate_exe import generate_exe
 from loguru import logger
