@@ -364,12 +364,7 @@ def build(
     get_getpippy(build_data=build_data)
 
     # prepare for pip install
-    prepare_for_pip_install(
-        python_version=python_version,
-        app_dir_path=build_data.app_dir_path,
-        pydist_dir_path=build_data.python_dir_path,
-        build_source_dir_path=build_data.source_dir_path,
-    )
+    prepare_for_pip_install(build_data=build_data)
 
     # install pip
     install_pip(pydist_dir_path=build_data.python_dir_path)
@@ -381,7 +376,7 @@ def build(
     install_requirements_from_file(build_data=build_data)
 
     # generate exe
-    exe_file_path = make_startup_exe(build_data=build_data)
+    make_startup_exe(build_data=build_data)
 
     # make zip file
     if make_zip:
@@ -461,46 +456,40 @@ def get_getpippy(build_data: BuildData) -> Path:
     return build_data.python_dir_path / GETPIPPY_FILE
 
 
-#! remove
-# def copy_getpippy_to_pydist_dir(
-#     getpippy_file_path: Path, pydist_dir_path: Path
-# ) -> None:
-#     """Copy `get-pip.py` file to build folder"""
-#     print(f"Coping `{getpippy_file_path}` file to `{pydist_dir_path}`")
-#     print("Done!\n")
-
-
-def prepare_for_pip_install(
-    python_version: str,
-    app_dir_path: Path,
-    pydist_dir_path: Path,
-    build_source_dir_path: Path,
-) -> None:
+def prepare_for_pip_install(build_data: BuildData) -> None:
     """
-    Prepare the extracted embedded python version for pip installation
-    - Uncomment 'import site' line from pythonXX._pth file
-    - Extract pythonXX.zip zip file to pythonXX.zip folder
-      and delete pythonXX.zip zip file
+    Prepare the extracted embedded python version for pip installation:
+    - Uncomment `import site` line from `pythonXX._pth` file
+    - Extract `pythonXX.zip` zip file to `pythonXX.zip` folder
+    - delete `pythonXX.zip` zip file
+
+    Args:
+        build_data (BuildData): The build data object.
+
+    Returns:
+        None
     """
     logger.info(f"Preparing python distribution for pip installation")
 
-    short_python_version = "".join(python_version.split(".")[:2])  # 3.9.7 -> 39
-    pth_file_name = f"python{short_python_version}._pth"  # python39._pth
-    pythonzip_file_name = f"python{short_python_version}.zip"  # python39.zip
+    short_python_version = "".join(
+        build_data.python_version.split(".")[:2]
+    )  # "3.9.7" -> "39"
+    pth_file = f"python{short_python_version}._pth"  # python39._pth
+    pythonzip_file = f"python{short_python_version}.zip"  # python39.zip
 
-    pth_file_path = pydist_dir_path / pth_file_name
-    pythonzip_file_path = pydist_dir_path / pythonzip_file_name
+    pth_file_path = build_data.python_dir_path / pth_file
+    pythonzip_file_path = build_data.python_dir_path / pythonzip_file
 
     logger.debug(f"Generating `{pth_file_path}` with uncommented `import site` line")
 
-    if pydist_dir_path == app_dir_path:
+    if build_data.python_dir_path == build_data.app_dir_path:
         relative_path_to_source = "."
     else:
         relative_path_to_source = ".."
-    relative_path_to_source += f"\\{build_source_dir_path.name}"
+    relative_path_to_source += f"\\{build_data.source_dir_path.name}"
 
     pth_file_content = (
-        f"{pythonzip_file_name}\n"
+        f"{pythonzip_file}\n"
         + f"{relative_path_to_source}\n\n"
         + "# Uncomment to run site.main() automatically\n"
         + "import site\n"
