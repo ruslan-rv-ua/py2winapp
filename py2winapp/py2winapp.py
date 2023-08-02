@@ -58,16 +58,17 @@ DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
 ######################################################################
 
 
-def setup_logger(log_dir_path: Path) -> None:
-    """
-    Setup the logger to log to a file and to the console.
-
-    Args:
-        log_dir_path (Path): The directory to save the log file to.
-    """
-    log_file_path = log_dir_path / "py2winapp.log"
+def setup_logger() -> None:
+    log_file_path = Path.cwd() / "py2winapp.log"
+    if log_file_path.exists():
+        log_file_path.unlink()
     logger.remove(0)
-    logger.add(log_file_path, format="{level:10} {message}", level="DEBUG")
+    logger.add(
+        log_file_path,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level:10} | {message}",
+        level="DEBUG",
+        enqueue=True,
+    )
     logger.add(
         sys.stderr,
         format="<level>{level:10}: {message}</level>",
@@ -326,9 +327,6 @@ def build(
         icon_file=icon_file,
         make_zip=make_zip,
     )
-
-    # setup logging
-    setup_logger(log_dir_path=build_data.project_path)
 
     # check build data
     check_build_data(build_data=build_data)
@@ -701,3 +699,7 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         return output
     else:
         raise Exception(command, exit_code, output)
+
+
+# setup logging
+setup_logger()
