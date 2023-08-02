@@ -5,9 +5,11 @@ This script is used to create a Windows executable from a Python script.
 TODO:
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
 - test if source dir is not a app dir
+- add docstrings
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - add default icon
+- make project path as parameter
 """
 import json
 import os
@@ -228,7 +230,7 @@ def make_build_data(
 ) -> BuildData:
     logger.info("Collecting build data")
 
-    project_path = Path.cwd()  #! TODO: make this a parameter
+    project_path = Path.cwd()
 
     if app_name is None:
         app_name = project_path.name
