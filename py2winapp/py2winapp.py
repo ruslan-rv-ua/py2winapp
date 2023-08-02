@@ -3,10 +3,10 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- make app_dir and exe file name patterns configurable
 - add ignore input patterns
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
 - add support for pyproject.toml
-- add app_name and app_version to BuildData
 
 """
 import os
@@ -29,9 +29,6 @@ from py2winapp.downloader import Dwwnloader
 # constants
 ######################################################################
 
-# python_version can be anything of the form:
-# `x.x.x` where any x may be set to a positive integer.
-PYTHON_VERSION_REGEX = re.compile(r"^(\d+|x)\.(\d+|x)\.(\d+|x)$")
 
 GETPIPPY_URL = "https://bootstrap.pypa.io/get-pip.py"
 GETPIPPY_FILE = "get-pip.py"
@@ -112,6 +109,96 @@ class BuildData:
     download_dir_path: Path
 
 
+def check_build_data(build_data: BuildData) -> None:
+    logger.info("Checking build data")
+
+    errors_count = 0
+
+    # python_version can be anything of the form:
+    # `x.x.x` where any x may be set to a positive integer.
+    python_version_regex = re.compile(r"^(\d+|x)\.(\d+|x)\.(\d+|x)$")
+    if re.match(python_version_regex, build_data.python_version) is None:
+        errors_count += 1
+        logger.error(
+            f"Specified python version `{build_data.python_version}` "
+            "does not have the correct format, "
+            "it should be of format: `x.x.x` where `x` is a positive number."
+        )
+
+    # check project path
+    if not build_data.project_path.exists():
+        errors_count += 1
+        logger.error(f"Project path `{build_data.project_path}` does not exist.")
+    elif not build_data.project_path.is_dir():
+        errors_count += 1
+        logger.error(f"Project path `{build_data.project_path}` is not a directory.")
+
+    # check input source dir
+    if not build_data.input_source_dir_path.exists():
+        errors_count += 1
+        logger.error(
+            f"Input source dir `{build_data.input_source_dir_path}` does not exist."
+        )
+    elif not build_data.input_source_dir_path.is_dir():
+        errors_count += 1
+        logger.error(
+            f"Input source dir `{build_data.input_source_dir_path}` is not a directory."
+        )
+
+    # check main file
+    if not build_data.main_file_path.exists():
+        errors_count += 1
+        logger.error(f"Main file `{build_data.main_file_path}` does not exist.")
+    elif not build_data.main_file_path.is_file():
+        errors_count += 1
+        logger.error(f"Main file `{build_data.main_file_path}` is not a file.")
+    elif build_data.main_file_path.suffix != ".py":
+        errors_count += 1
+        logger.error(
+            f"Main file `{build_data.main_file_path}` does not have the `.py` extension."
+        )
+
+    # check requirements file
+    if not build_data.requirements_file_path.exists():
+        errors_count += 1
+        logger.error(
+            f"Requirements file `{build_data.requirements_file_path}` does not exist."
+        )
+    elif not build_data.requirements_file_path.is_file():
+        errors_count += 1
+        logger.error(
+            f"Requirements file `{build_data.requirements_file_path}` is not a file."
+        )
+
+    # check icon file
+    if build_data.icon_file_path is not None:
+        if not build_data.icon_file_path.exists():
+            errors_count += 1
+            logger.error(f"Icon file `{build_data.icon_file_path}` does not exist.")
+        elif not build_data.icon_file_path.is_file():
+            errors_count += 1
+            logger.error(f"Icon file `{build_data.icon_file_path}` is not a file.")
+
+    # check download dir
+    if not build_data.download_dir_path.exists():
+        # make it
+        logger.info(f"Creating download dir `{build_data.download_dir_path}`.")
+        build_data.download_dir_path.mkdir(parents=True)
+    elif not build_data.download_dir_path.is_dir():
+        errors_count += 1
+        logger.error(
+            f"Download dir `{build_data.download_dir_path}` is not a directory."
+        )
+
+    # summary
+    if errors_count > 0:
+        logger.error(
+            f"Found {errors_count} error(s) in build data, "
+            "please fix them and try again."
+        )
+        raise ValueError("Found errors in build data.")
+
+
 def make_build_data(
     python_version: str,
     app_name: Union[str, None],
@@ -128,15 +215,7 @@ def make_build_data(
     icon_file: Union[str, Path, None],
     make_zip: bool,
 ) -> BuildData:
-    if not is_valid_python_version(python_version):
-        raise ValueError(
-            f"Specified python version `{python_version}` "
-            "does not have the correct format, "
-            "it should be of format: `x.x.x` where `x` is a positive number."
-        )
     project_path = Path.cwd()  #! TODO: make this a parameter
-    if not project_path.exists() or not project_path.is_dir():
-        raise ValueError(f"Project path `{project_path}` does not exist.")
 
     if app_name is None:
         app_name = project_path.name
@@ -149,18 +228,10 @@ def make_build_data(
     app_dir_path = dist_dir_path / app_dir
 
     input_source_dir_path = project_path / input_source_dir
-    if not input_source_dir_path.exists() or not input_source_dir_path.is_dir():
-        raise ValueError(f"Input directory `{input_source_dir_path}` does not exist.")
 
     main_file_path = input_source_dir_path / main_file
-    if not main_file_path.exists() or not main_file_path.is_file():
-        raise ValueError(f"Main file `{main_file_path}` does not exist.")
 
     requirements_file_path = project_path / requirements_file
-    if not requirements_file_path.exists():
-        raise ValueError(
-            f"Requirements file `{requirements_file_path}` does not exist."
-        )
 
     python_dir_path = app_dir_path / python_dir
     source_dir_path = app_dir_path / source_dir
@@ -169,8 +240,6 @@ def make_build_data(
         icon_file_path = Path(icon_file)
         if not icon_file_path.is_absolute():
             icon_file_path = project_path / icon_file
-        if not icon_file_path.exists():
-            raise ValueError(f"Icon file `{icon_file_path}` does not exist.")
     else:
         icon_file_path = None
 
@@ -260,6 +329,9 @@ def build(
 
     # setup logging
     setup_logger(log_dir_path=build_data.project_path)
+
+    # check build data
+    check_build_data(build_data=build_data)
 
     # create or clean app directory
     make_app_dir(build_data=build_data)
@@ -570,23 +642,6 @@ def make_zip_file(build_data: BuildData) -> Path:
 ######################################################################
 # utils
 ######################################################################
-
-
-def is_valid_python_version(python_version: str) -> bool:
-    """
-    Check if the given string is a valid Python version string.
-
-    python_version can be anything of the form:
-    `x.x.x` where any x may be set to a positive integer.
-
-    Args:
-        python_version (str): The string to check.
-
-    Returns:
-        bool: True if the string is a valid Python version string, False otherwise.
-    """
-    #! TODO: remove this function
-    return re.match(PYTHON_VERSION_REGEX, python_version) is not None
 
 
 def unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
