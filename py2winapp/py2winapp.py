@@ -4,7 +4,7 @@ This script is used to create a Windows executable from a Python script.
 
 TODO:
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
-- add ignore input patterns
+- test if source dir is not a app dir
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - add default icon
@@ -18,7 +18,7 @@ import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable, List, Tuple, Union
 
 from genexe.generate_exe import generate_exe
 from loguru import logger
@@ -92,6 +92,7 @@ class BuildData:
     dist_dir_path: Path
     input_source_dir: str
     input_source_dir_path: Path
+    ignore_input_patterns: List[str]
     main_file: str
     main_file_path: Path
     app_dir: str
@@ -214,7 +215,7 @@ def make_build_data(
     app_name: Union[str, None],
     input_source_dir: str,
     main_file: str,
-    ignore_input: Iterable[str],  #! TODO: add this
+    ignore_input_patterns: Iterable[str],
     app_dir: Union[str, None],
     show_console: bool,
     requirements_file: str,
@@ -279,6 +280,7 @@ def make_build_data(
         dist_dir_path=dist_dir_path,
         input_source_dir=input_source_dir,
         input_source_dir_path=input_source_dir_path,
+        ignore_input_patterns=list(ignore_input_patterns),
         main_file=main_file,
         main_file_path=main_file_path,
         app_dir=app_dir,
@@ -311,7 +313,7 @@ def build(
     app_name: Union[
         str, None
     ] = None,  # name of the app. If None, use project's directory name
-    ignore_input: Iterable[str] = (),  # patterns to ignore in input_dir
+    ignore_input_patterns: Iterable[str] = (),  # patterns to ignore in input_dir
     app_dir: Union[
         str, None
     ] = None,  # where to put the app under `dist` directory (relative to project_dir)
@@ -331,7 +333,7 @@ def build(
         input_source_dir=input_source_dir,
         main_file=main_file,
         app_name=app_name,
-        ignore_input=ignore_input,
+        ignore_input_patterns=ignore_input_patterns,
         app_dir=app_dir,
         show_console=show_console,
         requirements_file=requirements_file,
@@ -353,12 +355,7 @@ def build(
     make_app_dir(build_data=build_data)
 
     # copy source files
-    copy_source_files(
-        input_source_dir_path=build_data.input_source_dir_path,
-        source_dir_path=build_data.source_dir_path,
-        build_dir_name=build_data.app_dir_path.name,
-        ignore_patterns=list(ignore_input),
-    )
+    copy_source_files(build_data=build_data)
 
     # download python embedded distribution file and extract it to build directory
     python_zip_path = get_python_dist(build_data=build_data)
@@ -411,25 +408,19 @@ def make_app_dir(build_data: BuildData) -> None:
     build_data.app_dir_path.mkdir()
 
 
-def copy_source_files(
-    input_source_dir_path: Path,
-    source_dir_path: Path,
-    build_dir_name: str,
-    ignore_patterns: list[str] = [],
-) -> None:
-    """Copy .py files and others to build folder"""
+def copy_source_files(build_data: BuildData) -> None:
     logger.info(f"Copying source files")
-    ignore_patterns = ignore_patterns or []
-    ignore_patterns.append(build_dir_name)
+    ignore_patterns = build_data.ignore_input_patterns
+    ignore_patterns.append(build_data.app_dir)
     ignore_patterns += DEFAULT_IGNORE_PATTERNS
-    if not source_dir_path.is_dir():
-        source_dir_path.mkdir()
+    if not build_data.source_dir_path.is_dir():
+        build_data.source_dir_path.mkdir()
     logger.debug(
-        f"Copying files from `{input_source_dir_path}` to `{source_dir_path}`!"
+        f"Copying files from `{build_data.input_source_dir_path!r}` to `{build_data.source_dir_path!r}`"
     )
     shutil.copytree(
-        src=input_source_dir_path,
-        dst=source_dir_path,
+        src=build_data.input_source_dir_path,
+        dst=build_data.source_dir_path,
         ignore=shutil.ignore_patterns(*ignore_patterns),
         dirs_exist_ok=True,
     )
@@ -707,7 +698,7 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         if nextline:
             # sys.stdout.write(nextline)
             # sys.stdout.flush()
-            logger.debug(nextline)
+            logger.debug(nextline.strip())
 
     output = process.communicate()[0].decode("UTF-8")
     exit_code = process.returncode
