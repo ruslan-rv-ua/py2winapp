@@ -358,10 +358,10 @@ def build(
     copy_source_files(build_data=build_data)
 
     # download python embedded distribution file and extract it to build directory
-    python_zip_path = get_python_dist(build_data=build_data)
+    get_python_dist(build_data=build_data)
 
     # download `get_pip.py` and copy it to build directory
-    getpippy_file_path = get_getpippy(build_data=build_data)
+    get_getpippy(build_data=build_data)
 
     # prepare for pip install
     prepare_for_pip_install(
@@ -375,7 +375,6 @@ def build(
     install_pip(pydist_dir_path=build_data.python_dir_path)
 
     # delete `get_pip.py` from build directory cause it waists more than 2.5MB
-    # getpippy_file_path.unlink() #! TODO: chore - romove this line
     (build_data.python_dir_path / GETPIPPY_FILE).unlink()
 
     # install requirements
@@ -446,11 +445,20 @@ def get_python_dist(build_data: BuildData) -> Path:
 
 
 def get_getpippy(build_data: BuildData) -> Path:
+    """
+    Downloads `get-pip.py` and copies it to the python distribution directory.
+
+    Args:
+        build_data (BuildData): The build data object.
+
+    Returns:
+        Path: The path to the `get-pip.py` file.
+    """
     logger.info(f"Downloading `get-pip.py`")
     downloader = Dwwnloader(build_data.download_dir_path)
     getpippy_file_path = downloader.download(file=GETPIPPY_FILE, url=GETPIPPY_URL)
     shutil.copy2(getpippy_file_path, build_data.python_dir_path)
-    return getpippy_file_path
+    return build_data.python_dir_path / GETPIPPY_FILE
 
 
 #! remove
