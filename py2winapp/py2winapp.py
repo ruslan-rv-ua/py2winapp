@@ -3,12 +3,13 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
-- make app_dir and exe file name patterns configurable
-- add ignore input patterns
 - fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
+- add ignore input patterns
 - add support for pyproject.toml
-
+- make app_dir and exe file name patterns configurable
+- add default icon
 """
+import json
 import os
 import re
 import shutil
@@ -103,7 +104,7 @@ class BuildData:
     python_dir_path: Path
     source_dir: str
     source_dir_path: Path
-    exe_file_without_extension: str
+    exe_file: str
     exe_file_path: Path
     icon_file_path: Union[Path, None]
     zip_file_path: Union[Path, None]
@@ -200,6 +201,14 @@ def check_build_data(build_data: BuildData) -> None:
         raise ValueError("Found errors in build data.")
 
 
+def log_build_data(build_data: BuildData) -> None:
+    # debug build data, all attributes of build data are sorted alphabetically
+    data_str = "\n".join(
+        f"{attr:>22}: {value!r}" for attr, value in sorted(vars(build_data).items())
+    )
+    logger.debug(f"Build data:\n{data_str}")
+
+
 def make_build_data(
     python_version: str,
     app_name: Union[str, None],
@@ -216,16 +225,20 @@ def make_build_data(
     icon_file: Union[str, Path, None],
     make_zip: bool,
 ) -> BuildData:
+    logger.info("Collecting build data")
+
     project_path = Path.cwd()  #! TODO: make this a parameter
 
     if app_name is None:
         app_name = project_path.name
+        logger.info(f"App name not specified, using project name: `{app_name}`.")
     app_name_slug = slugify(app_name, decimal=False)
 
     dist_dir_path = project_path / DEFAULT_DIST_DIR
 
     if app_dir is None:
         app_dir = app_name_slug
+        logger.info(f"App dir not specified, using app name slug: `{app_dir}` ")
     app_dir_path = dist_dir_path / app_dir
 
     input_source_dir_path = project_path / input_source_dir
@@ -248,13 +261,15 @@ def make_build_data(
     download_dir_path.mkdir(exist_ok=True)
 
     if exe_file is None:
-        exe_file = app_name_slug
-    exe_file = exe_file.strip().lower()
-    if not exe_file.endswith(".exe"):
-        exe_file += ".exe"
+        exe_file = f"{app_name_slug}.exe"
+        logger.info(f"Exe file not specified, using app name slug: `{exe_file}`.")
+    else:
+        exe_file = exe_file.strip().lower()
+        if not exe_file.endswith(".exe"):
+            exe_file += ".exe"
     exe_file_path = app_dir_path / exe_file
 
-    zip_file_path = app_dir_path / f"{exe_file}.zip" if make_zip else None
+    zip_file_path = app_dir_path / f"{app_dir}.zip" if make_zip else None
 
     return BuildData(
         python_version=python_version,
@@ -276,7 +291,7 @@ def make_build_data(
         python_dir_path=python_dir_path,
         source_dir=source_dir,
         source_dir_path=source_dir_path,
-        exe_file_without_extension=exe_file,
+        exe_file=exe_file,
         exe_file_path=exe_file_path,
         icon_file_path=icon_file_path,
         zip_file_path=zip_file_path,
@@ -327,6 +342,9 @@ def build(
         icon_file=icon_file,
         make_zip=make_zip,
     )
+
+    # log build data
+    log_build_data(build_data=build_data)
 
     # check build data
     check_build_data(build_data=build_data)
