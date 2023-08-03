@@ -3,13 +3,17 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
-- fix: can't install requirement like `requests==2.31.0 ; python_version >= "3.11" and python_version < "4.0"`
+- make project path as parameter
 - test if source dir is not a app dir
-- add docstrings
+- chore:
+    - move `logger.info` to build() function
+    - add docstrings
+    - README.md
+    - remve "`" from logger messages, use {!r} instead
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - add default icon
-- make project path as parameter
+- suppress `get-exe` output
 """
 import os
 import re
@@ -23,6 +27,7 @@ from typing import Iterable, List, Union
 
 from genexe.generate_exe import generate_exe
 from loguru import logger
+from pip_requirements_parser import RequirementsFile
 from slugify import slugify
 
 from py2winapp.downloader import Dwwnloader
@@ -173,6 +178,15 @@ def check_build_data(build_data: BuildData) -> None:
         logger.error(
             f"Requirements file `{build_data.requirements_file_path}` is not a file."
         )
+    else:
+        req_checker = RequirementsFile.from_file(str(build_data.requirements_file_path))
+        if req_checker.invalid_lines:
+            for line in req_checker.invalid_lines:
+                errors_count += 1
+                logger.error(
+                    f"Error in requirements file: {line.filename}:{line.line_number}"
+                )
+                logger.error(line.error_message)
 
     # check icon file
     if build_data.icon_file_path is not None:
@@ -196,11 +210,11 @@ def check_build_data(build_data: BuildData) -> None:
 
     # summary
     if errors_count > 0:
-        logger.error(
+        logger.critical(
             f"Found {errors_count} error(s) in build data, "
             "please fix them and try again."
         )
-        raise ValueError("Found errors in build data.")
+        sys.exit(1)
 
 
 def log_build_data(build_data: BuildData) -> None:
@@ -374,7 +388,7 @@ def build(
     (build_data.python_dir_path / GETPIPPY_FILE).unlink()
 
     # install requirements
-    install_requirements_from_file(build_data=build_data)
+    install_requirements_txt_file(build_data=build_data)
 
     # generate exe
     make_startup_exe(build_data=build_data)
@@ -517,12 +531,7 @@ def install_pip(pydist_dir_path: Path) -> None:
         raise RuntimeError("Can not install `pip` with `get-pip.py`!")
 
 
-def install_requirements_from_file(build_data: BuildData) -> None:
-    """
-    Install the modules from requirements.txt file
-    - extra_pip_install_args (optional `List[str]`) :
-    pass these additional arguments to the pip install command
-    """
+def install_requirements_txt_file(build_data: BuildData) -> None:
     logger.info(f"Installing requirements")
     logger.debug(f"Requirements file path: `{build_data.requirements_file_path}`")
 
@@ -542,26 +551,14 @@ def install_requirements_from_file(build_data: BuildData) -> None:
         return
     except Exception as e:
         pass
-    logger.error(
-        f"Failed to install modules from `{build_data.requirements_file_path}`"
+    logger.warning(
+        f"Failed to install requirements from `{build_data.requirements_file_path}`"
     )
-    modules = build_data.requirements_file_path.read_text().splitlines()
-    install_requirements_one_by_one(modules, build_data)
+    install_requirements_txt_1by1(build_data)
 
 
-def install_requirements_one_by_one(
-    reqauirements: list[str], build_data: BuildData
-) -> None:
-    """Install the modules from requirements.txt file
-
-    - extra_pip_install_args (optional `List[str]`) :
-    pass these additional arguments to the pip install command
-
-    Each module is installed one by one.
-    If any module fails to install, it is added to FAILED_TO_INSTALL_MODULES.txt file
-
-    Module example: `requests==2.31.0`
-    """
+def install_requirements_txt_1by1(build_data: BuildData) -> None:
+    reqauirements = build_data.requirements_file_path.read_text().splitlines()
     logger.info(f"Installing requirements one by one")
     if build_data.extra_pip_install_args:
         extra_args_str = extra_args_str = " " + " ".join(
@@ -571,7 +568,10 @@ def install_requirements_one_by_one(
         extra_args_str = ""
     scripts_dir_path = build_data.python_dir_path / "Scripts"
     failed_to_install_modules = []
-    for module in reqauirements:
+    for line in reqauirements:
+        module = line.strip()
+        if not module or module.startswith("#"):
+            continue
         logger.info(f"Installing {module} ...")
         command = (
             "pip3.exe install --no-cache-dir --no-warn-script-location "

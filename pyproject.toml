@@ -13,6 +13,7 @@ python = "^3.10"
 gen-exe = "^0.2.1"
 requests = "^2.31.0"
 python-slugify = "^8.0.1"
+pip-requirements-parser = "^32.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
