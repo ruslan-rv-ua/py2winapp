@@ -3,17 +3,18 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
+- separate build and dist dirs
+- make build file structure
 - make project path as parameter
 - test if source dir is not a app dir
 - chore:
-    - move `logger.info` to build() function
     - add docstrings
     - README.md
-    - remve "`" from logger messages, use {!r} instead
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - add default icon
 - suppress `get-exe` output
+- x86 Python support
 """
 import os
 import re
@@ -54,10 +55,12 @@ DEFAULT_IGNORE_PATTERNS = [
     "build.py",
 ]
 
+DEFAULT_DIST_DIR = "dist"  # ensure this is in .gitignore
 DEFAULT_DIST_DIR = "dist3"  #! debug only
+DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
+DEFAULT_LOG_FILE = "py2winapp.log"
 
 DEFAULT_PYDIST_DIR = "python"
-DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
 
 
 ######################################################################
@@ -65,8 +68,8 @@ DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
 ######################################################################
 
 
-def setup_logger() -> None:
-    log_file_path = Path.cwd() / "py2winapp.log"
+def setup_logger() -> int:
+    log_file_path = Path.cwd() / DEFAULT_LOG_FILE
     if log_file_path.exists():
         log_file_path.unlink()
     logger.remove(0)
@@ -82,6 +85,7 @@ def setup_logger() -> None:
         level="INFO",
         colorize=True,
     )
+    return 0
 
 
 ######################################################################
@@ -118,9 +122,7 @@ class BuildData:
     download_dir_path: Path
 
 
-def check_build_data(build_data: BuildData) -> None:
-    logger.info("Checking build data")
-
+def check_build_data(build_data: BuildData) -> int:
     errors_count = 0
 
     # python_version can be anything of the form:
@@ -129,54 +131,54 @@ def check_build_data(build_data: BuildData) -> None:
     if re.match(python_version_regex, build_data.python_version) is None:
         errors_count += 1
         logger.error(
-            f"Specified python version `{build_data.python_version}` "
+            f"Specified python version {build_data.python_version!r} "
             "does not have the correct format, "
-            "it should be of format: `x.x.x` where `x` is a positive number."
+            'it should be of format: "x.x.x" where "x" is a positive number.'
         )
 
     # check project path
     if not build_data.project_path.exists():
         errors_count += 1
-        logger.error(f"Project path `{build_data.project_path}` does not exist.")
+        logger.error(f"Project path {build_data.project_path!r} does not exist.")
     elif not build_data.project_path.is_dir():
         errors_count += 1
-        logger.error(f"Project path `{build_data.project_path}` is not a directory.")
+        logger.error(f"Project path {build_data.project_path!r} is not a directory.")
 
     # check input source dir
     if not build_data.input_source_dir_path.exists():
         errors_count += 1
         logger.error(
-            f"Input source dir `{build_data.input_source_dir_path}` does not exist."
+            f"Input source dir {build_data.input_source_dir_path!r} does not exist."
         )
     elif not build_data.input_source_dir_path.is_dir():
         errors_count += 1
         logger.error(
-            f"Input source dir `{build_data.input_source_dir_path}` is not a directory."
+            f"Input source dir {build_data.input_source_dir_path!r} is not a directory."
         )
 
     # check main file
     if not build_data.main_file_path.exists():
         errors_count += 1
-        logger.error(f"Main file `{build_data.main_file_path}` does not exist.")
+        logger.error(f"Main file {build_data.main_file_path!r} does not exist.")
     elif not build_data.main_file_path.is_file():
         errors_count += 1
-        logger.error(f"Main file `{build_data.main_file_path}` is not a file.")
+        logger.error(f"Main file {build_data.main_file_path!r} is not a file.")
     elif build_data.main_file_path.suffix != ".py":
         errors_count += 1
         logger.error(
-            f"Main file `{build_data.main_file_path}` does not have the `.py` extension."
+            f"Main file {build_data.main_file_path!r} does not have the `.py` extension."
         )
 
     # check requirements file
     if not build_data.requirements_file_path.exists():
         errors_count += 1
         logger.error(
-            f"Requirements file `{build_data.requirements_file_path}` does not exist."
+            f"Requirements file {build_data.requirements_file_path!r} does not exist."
         )
     elif not build_data.requirements_file_path.is_file():
         errors_count += 1
         logger.error(
-            f"Requirements file `{build_data.requirements_file_path}` is not a file."
+            f"Requirements file {build_data.requirements_file_path!r} is not a file."
         )
     else:
         req_checker = RequirementsFile.from_file(str(build_data.requirements_file_path))
@@ -192,29 +194,23 @@ def check_build_data(build_data: BuildData) -> None:
     if build_data.icon_file_path is not None:
         if not build_data.icon_file_path.exists():
             errors_count += 1
-            logger.error(f"Icon file `{build_data.icon_file_path}` does not exist.")
+            logger.error(f"Icon file {build_data.icon_file_path!r} does not exist.")
         elif not build_data.icon_file_path.is_file():
             errors_count += 1
-            logger.error(f"Icon file `{build_data.icon_file_path}` is not a file.")
+            logger.error(f"Icon file {build_data.icon_file_path!r} is not a file.")
 
     # check download dir
     if not build_data.download_dir_path.exists():
         # make it
-        logger.info(f"Creating download dir `{build_data.download_dir_path}`.")
+        logger.info(f"Creating download dir {build_data.download_dir_path!r}")
         build_data.download_dir_path.mkdir(parents=True)
     elif not build_data.download_dir_path.is_dir():
         errors_count += 1
         logger.error(
-            f"Download dir `{build_data.download_dir_path}` is not a directory."
+            f"Download dir {build_data.download_dir_path!r} is not a directory."
         )
 
-    # summary
-    if errors_count > 0:
-        logger.critical(
-            f"Found {errors_count} error(s) in build data, "
-            "please fix them and try again."
-        )
-        sys.exit(1)
+    return errors_count
 
 
 def log_build_data(build_data: BuildData) -> None:
@@ -241,8 +237,6 @@ def make_build_data(
     icon_file: Union[str, Path, None],
     make_zip: bool,
 ) -> BuildData:
-    logger.info("Collecting build data")
-
     project_path = Path.cwd()
 
     if app_name is None:
@@ -254,7 +248,7 @@ def make_build_data(
 
     if app_dir is None:
         app_dir = app_name_slug
-        logger.info(f"App dir not specified, using app name slug: `{app_dir}` ")
+        logger.debug(f"App dir not specified, using app name slug: {app_dir!r} ")
     app_dir_path = dist_dir_path / app_dir
 
     input_source_dir_path = project_path / input_source_dir
@@ -278,7 +272,9 @@ def make_build_data(
 
     if exe_file is None:
         exe_file = f"{app_name_slug}.exe"
-        logger.info(f"Exe file not specified, using app name slug: `{exe_file}`.")
+        logger.info(
+            f"Executable file name not specified, using app name slug: {exe_file!r}."
+        )
     else:
         exe_file = exe_file.strip().lower()
         if not exe_file.endswith(".exe"):
@@ -343,6 +339,7 @@ def build(
     icon_file: Union[str, Path, None] = None,  # icon file to use for the app
     make_zip: bool = False,  # make a zip file of the app
 ) -> BuildData:
+    logger.info("Gethering build data...")
     build_data = make_build_data(
         python_version=python_version,
         input_source_dir=input_source_dir,
@@ -359,45 +356,49 @@ def build(
         icon_file=icon_file,
         make_zip=make_zip,
     )
-
-    # log build data
     log_build_data(build_data=build_data)
 
-    # check build data
-    check_build_data(build_data=build_data)
+    errors_count = 0
 
-    # create or clean app directory
+    logger.info("Checking build data...")
+    errors_count += check_build_data(build_data=build_data)
+
+    logger.info("Creating app directory...")
     make_app_dir(build_data=build_data)
 
-    # copy source files
+    logger.info("Copying source files...")
     copy_source_files(build_data=build_data)
 
-    # download python embedded distribution file and extract it to build directory
+    logger.info("Getting python distribution...")
     get_python_dist(build_data=build_data)
 
-    # download `get_pip.py` and copy it to build directory
+    logger.info("Getting pip...")
     get_getpippy(build_data=build_data)
 
-    # prepare for pip install
+    logger.info("Installing pip...")
     prepare_for_pip_install(build_data=build_data)
-
-    # install pip
     install_pip(pydist_dir_path=build_data.python_dir_path)
 
     # delete `get_pip.py` from build directory cause it waists more than 2.5MB
     (build_data.python_dir_path / GETPIPPY_FILE).unlink()
 
-    # install requirements
-    install_requirements_txt_file(build_data=build_data)
+    logger.info("Installing requirements...")
+    errors_count += install_requirements_txt_file(build_data=build_data)
 
-    # generate exe
+    logger.info("Generating startup executable...")
     make_startup_exe(build_data=build_data)
 
-    # make zip file
     if make_zip:
+        logger.info("Making zip file...")
         make_zip_file(build_data=build_data)
 
-    logger.success(f"Done building `{build_data.app_dir_path}`")
+    if errors_count > 0:
+        logger.critical(f"Build failed with {errors_count} errors!")
+        logger.critical("Fix the errors and try again.")
+        logger.critical(f"Check the log {DEFAULT_LOG_FILE!r} for more details.")
+        sys.exit(1)
+    else:
+        logger.success(f"Build succeeded!")
 
     return build_data
 
@@ -408,24 +409,22 @@ def build(
 
 
 def make_app_dir(build_data: BuildData) -> None:
-    logger.info(f"Creating app directory")
     if build_data.dist_dir_path.is_dir():
-        logger.debug(f"Deleting existing dist directory `{build_data.dist_dir_path}`!")
+        logger.debug(f"Deleting existing dist directory {build_data.dist_dir_path!r}")
         shutil.rmtree(build_data.dist_dir_path)
-    logger.debug(f"Creating app directory `{build_data.app_dir_path}`!")
+    logger.debug(f"Creating app directory {build_data.app_dir_path!r}")
     build_data.dist_dir_path.mkdir()
     build_data.app_dir_path.mkdir()
 
 
 def copy_source_files(build_data: BuildData) -> None:
-    logger.info(f"Copying source files")
     ignore_patterns = build_data.ignore_input_patterns
     ignore_patterns.append(build_data.app_dir)
     ignore_patterns += DEFAULT_IGNORE_PATTERNS
     if not build_data.source_dir_path.is_dir():
         build_data.source_dir_path.mkdir()
     logger.debug(
-        f"Copying files from `{build_data.input_source_dir_path!r}` to `{build_data.source_dir_path!r}`"
+        f"Copying files from {build_data.input_source_dir_path!r} to {build_data.source_dir_path!r}"
     )
     shutil.copytree(
         src=build_data.input_source_dir_path,
@@ -435,26 +434,26 @@ def copy_source_files(build_data: BuildData) -> None:
     )
 
 
-def get_python_dist(build_data: BuildData) -> Path:
-    logger.info(f"Downloading python distribution")
+def get_python_dist(build_data: BuildData) -> None:
+    # download python zip file
     downloader = Dwwnloader(build_data.download_dir_path)
     python_file_name = f"python-{build_data.python_version}-embed-amd64.zip"  # e.g. python-3.9.6-embed-amd64.zip
     downloaded_python_zip_path = downloader.download(
         url=f"{PYTHON_URL}/{build_data.python_version}/{python_file_name}",
         file=python_file_name,
     )
+
     # extract python zip file to build folder
     logger.debug(
-        f"Extracting `{downloaded_python_zip_path}` to `{build_data.python_dir_path}`"
+        f"Extracting {downloaded_python_zip_path!r} to {build_data.python_dir_path!r}"
     )
     unzip(
         zip_file_path=downloaded_python_zip_path,
         destination_dir_path=build_data.python_dir_path,
     )
-    return downloaded_python_zip_path
 
 
-def get_getpippy(build_data: BuildData) -> Path:
+def get_getpippy(build_data: BuildData) -> None:
     """
     Downloads `get-pip.py` and copies it to the python distribution directory.
 
@@ -464,11 +463,12 @@ def get_getpippy(build_data: BuildData) -> Path:
     Returns:
         Path: The path to the `get-pip.py` file.
     """
-    logger.info(f"Downloading `get-pip.py`")
+    # download `get-pip.py`
     downloader = Dwwnloader(build_data.download_dir_path)
     getpippy_file_path = downloader.download(file=GETPIPPY_FILE, url=GETPIPPY_URL)
+
+    # copy `get-pip.py` to python distribution directory
     shutil.copy2(getpippy_file_path, build_data.python_dir_path)
-    return build_data.python_dir_path / GETPIPPY_FILE
 
 
 def prepare_for_pip_install(build_data: BuildData) -> None:
@@ -484,8 +484,6 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
     Returns:
         None
     """
-    logger.info(f"Preparing python distribution for pip installation")
-
     short_python_version = "".join(
         build_data.python_version.split(".")[:2]
     )  # "3.9.7" -> "39"
@@ -495,7 +493,7 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
     pth_file_path = build_data.python_dir_path / pth_file
     pythonzip_file_path = build_data.python_dir_path / pythonzip_file
 
-    logger.debug(f"Generating `{pth_file_path}` with uncommented `import site` line")
+    logger.debug(f"Generating {pth_file_path!r} with uncommented `import site` line")
 
     if build_data.python_dir_path == build_data.app_dir_path:
         relative_path_to_source = "."
@@ -512,7 +510,7 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
     pth_file_path.write_text(pth_file_content, encoding="utf8")
 
     pythonzip_dir_path = Path(pythonzip_file_path)
-    logger.debug(f"Extracting `{pythonzip_file_path}` to `{pythonzip_dir_path}`")
+    logger.debug(f"Extracting {pythonzip_file_path!r} to {pythonzip_dir_path!r}")
     pythonzip_file_path = pythonzip_file_path.rename(
         pythonzip_file_path.with_suffix(".temp_zip")
     )
@@ -521,8 +519,6 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
 
 
 def install_pip(pydist_dir_path: Path) -> None:
-    logger.info(f"Installing `pip`")
-
     execute_os_command(
         command="python.exe get-pip.py --no-warn-script-location",
         cwd=str(pydist_dir_path),
@@ -531,9 +527,8 @@ def install_pip(pydist_dir_path: Path) -> None:
         raise RuntimeError("Can not install `pip` with `get-pip.py`!")
 
 
-def install_requirements_txt_file(build_data: BuildData) -> None:
-    logger.info(f"Installing requirements")
-    logger.debug(f"Requirements file path: `{build_data.requirements_file_path}`")
+def install_requirements_txt_file(build_data: BuildData) -> int:
+    logger.debug(f"Requirements file path: {build_data.requirements_file_path!r}")
 
     if build_data.extra_pip_install_args:
         extra_args_str = extra_args_str = " " + " ".join(
@@ -548,18 +543,18 @@ def install_requirements_txt_file(build_data: BuildData) -> None:
     )
     try:
         execute_os_command(command=command, cwd=str(scripts_dir_path))
-        return
+        return 0
     except Exception as e:
         pass
     logger.warning(
-        f"Failed to install requirements from `{build_data.requirements_file_path}`"
+        f"Failed to install requirements from {build_data.requirements_file_path!r}. "
+        "Trying to install requirements one by one ..."
     )
-    install_requirements_txt_1by1(build_data)
+    return install_requirements_txt_1by1(build_data)
 
 
-def install_requirements_txt_1by1(build_data: BuildData) -> None:
-    reqauirements = build_data.requirements_file_path.read_text().splitlines()
-    logger.info(f"Installing requirements one by one")
+def install_requirements_txt_1by1(build_data: BuildData) -> int:
+    requirements = build_data.requirements_file_path.read_text().splitlines()
     if build_data.extra_pip_install_args:
         extra_args_str = extra_args_str = " " + " ".join(
             build_data.extra_pip_install_args
@@ -568,11 +563,10 @@ def install_requirements_txt_1by1(build_data: BuildData) -> None:
         extra_args_str = ""
     scripts_dir_path = build_data.python_dir_path / "Scripts"
     failed_to_install_modules = []
-    for line in reqauirements:
+    for line in requirements:
         module = line.strip()
         if not module or module.startswith("#"):
             continue
-        logger.info(f"Installing {module} ...")
         command = (
             "pip3.exe install --no-cache-dir --no-warn-script-location "
             f"{module}{extra_args_str}"
@@ -580,7 +574,7 @@ def install_requirements_txt_1by1(build_data: BuildData) -> None:
         try:
             execute_os_command(command=command, cwd=str(scripts_dir_path))
         except Exception:
-            logger.error(f"FAILED TO INSTALL {module}")
+            logger.error(f"FAILED TO INSTALL {module!r}")
             failed_to_install_modules.append(module)
 
     if failed_to_install_modules:
@@ -589,12 +583,11 @@ def install_requirements_txt_1by1(build_data: BuildData) -> None:
         )
         logger.error(f"Failed to install {len(failed_to_install_modules)} modules")
         logger.error("See FAILED_TO_INSTALL_MODULES.txt for more info")
+        return len(failed_to_install_modules)
+    return 0
 
 
 def make_startup_exe(build_data: BuildData) -> None:
-    """Make the startup exe file needed to run the script"""
-    logger.info(f"Making startup exe file")
-
     relative_pydist_dir = build_data.python_dir_path.relative_to(
         build_data.app_dir_path
     )
@@ -602,12 +595,12 @@ def make_startup_exe(build_data: BuildData) -> None:
         build_data.app_dir_path
     )
     python_entrypoint = "python.exe" if build_data.show_console else "pythonw.exe"
-    logger.debug(f"Python entrypoint: `{python_entrypoint}`")
+    logger.debug(f"Python entrypoint: {python_entrypoint!r}")
     command_str = (
         f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
         + f"{{EXE_DIR}}\\{relative_source_dir}\\{build_data.main_file}"
     )
-    logger.debug(f"Making startup exe file `{build_data.exe_file_path}`")
+    logger.debug(f"Making startup exe file {build_data.exe_file_path!r}")
     generate_exe(
         target=build_data.exe_file_path,
         command=command_str,
@@ -628,20 +621,17 @@ def make_startup_exe(build_data: BuildData) -> None:
             )
 
 
-def make_zip_file(build_data: BuildData) -> Path:
-    logger.info(f"Making zip archive of the app")
-
+def make_zip_file(build_data: BuildData) -> None:
     destination_dir = build_data.dist_dir_path
     zip_file_path = Path(destination_dir) / build_data.app_dir_path.name
     root_dir = build_data.dist_dir_path
-    logger.debug(f"Making zip file `{zip_file_path}`")
+    logger.debug(f"Making zip file {zip_file_path!r}")
     shutil.make_archive(
         base_name=str(zip_file_path),
         format="zip",
         root_dir=str(root_dir),
         base_dir=str(build_data.app_dir_path.relative_to(root_dir)),
     )
-    return zip_file_path
 
 
 ######################################################################
@@ -657,7 +647,7 @@ def unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
         zip_file_path (Path): The path to the zip archive to extract.
         destination_dir_path (Path): The path to the directory to extract the files to.
     """
-    logger.debug(f"Unzipping {zip_file_path} to {destination_dir_path}...")
+    logger.debug(f"Unzipping {zip_file_path!r} to {destination_dir_path!r}...")
 
     with zipfile.ZipFile(zip_file_path, "r") as zip_file:
         zip_file.extractall(destination_dir_path)
@@ -708,5 +698,4 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         raise Exception(command, exit_code, output)
 
 
-# setup logging
 setup_logger()
