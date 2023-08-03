@@ -1,4 +1,4 @@
-from .py2winapp import build
+from .py2winapp import build  # noqa
 
 __app_name__ = "py2winapp"
 __version__ = "0.1.0"

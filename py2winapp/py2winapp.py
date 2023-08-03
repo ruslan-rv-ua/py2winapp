@@ -3,9 +3,6 @@
 This script is used to create a Windows executable from a Python script.
 
 TODO:
-- separate build and dist dirs
-- make build file structure
-- make project path as parameter
 - test if source dir is not a app dir
 - chore:
     - add docstrings
@@ -193,7 +190,8 @@ def check_build_data(build_data: BuildData) -> None:
                 )
                 logger.error(line.error_message)
             raise ValueError(
-                f"Requirements file {build_data.requirements_file_path!r} contains errors."
+                f"Requirements file {build_data.requirements_file_path!r} "
+                "contains errors."
             )
 
     # check icon file
@@ -231,16 +229,21 @@ def make_build_data(
     # Python version
     if python_version is None:
         # user current interpreter's version
-        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        python_version = (
+            f"{sys.version_info.major}.{sys.version_info.minor}."
+            f"{sys.version_info.micro}"
+        )
         logger.warning(
-            f"Python version not specified, using current interpreter's version: {python_version!r}"
+            f"Python version not specified, using current interpreter's version: "
+            f"{python_version!r}"
         )
 
     # project path
     if project_path is None:
         project_path = Path.cwd()
         logger.warning(
-            f"Project path not specified, using current working directory: {project_path!r}"
+            f"Project path not specified, using current working directory: "
+            f"{project_path!r}"
         )
     project_path = Path(project_path).resolve()
 
@@ -360,7 +363,8 @@ def build(
     ] = None,  # where the source code is. If None, use project's directory
     main_file: Union[
         str, None
-    ] = None,  # relative to input_source_dir, the main file to run. If None, use "main.py"
+    ] = None,  # relative to input_source_dir, the main file to run.
+    # If None, use "main.py"
     app_name: Union[
         str, None
     ] = None,  # name of the app. If None, use project's directory name
@@ -373,7 +377,8 @@ def build(
     extra_pip_install_args: List[
         str
     ] = [],  # extra args to pass for "pip install" command
-    python_dir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
+    python_dir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files
+    # (relative to app_dir)
     source_dir: str = "",  # where to put source files (relative to app_dir)
     exe_file: Union[
         str, None
@@ -465,7 +470,8 @@ def copy_source_files(build_data: BuildData) -> None:
     if not build_data.source_dir_path.is_dir():
         build_data.source_dir_path.mkdir()
     logger.debug(
-        f"Copying files from {build_data.input_source_dir_path!r} to {build_data.source_dir_path!r}"
+        f"Copying files from {build_data.input_source_dir_path!r} "
+        f"to {build_data.source_dir_path!r}"
     )
     shutil.copytree(
         src=build_data.input_source_dir_path,
@@ -478,7 +484,8 @@ def copy_source_files(build_data: BuildData) -> None:
 def get_python_dist(build_data: BuildData) -> None:
     # download python zip file
     downloader = Dwwnloader(build_data.download_dir_path)
-    python_file_name = f"python-{build_data.python_version}-embed-amd64.zip"  # e.g. python-3.9.6-embed-amd64.zip
+    # python zip file name is like `python-3.9.1-embed-amd64.zip`
+    python_file_name = f"python-{build_data.python_version}-embed-amd64.zip"
     downloaded_python_zip_path = downloader.download(
         url=f"{PYTHON_URL}/{build_data.python_version}/{python_file_name}",
         file=python_file_name,
@@ -706,7 +713,9 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
 
     Args:
         command (str): The command to execute.
-        cwd (Union[str, None], optional): The current working directory to execute the command in. Defaults to None.
+        cwd (Union[str, None], optional):
+            The current working directory to execute the command in.
+            Defaults to None.
 
     Raises:
         RuntimeError: If the command failed to execute.

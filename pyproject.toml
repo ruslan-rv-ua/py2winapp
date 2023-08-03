@@ -21,6 +21,8 @@ black = "^23.7.0"
 mypy = "^1.4.1"
 pre-commit = "^3.3.3"
 loguru = "^0.7.0"
+flake8 = "^6.1.0"
+flake8-pyproject = "^1.2.3"
 
 [build-system]
 requires = ["poetry-core"]
@@ -64,3 +66,12 @@ exclude = [
 # isort configs
 [tool.isort]
 line_length = 88
+
+# flake8 configs
+[tool.flake8]
+# ignore = ['E231', 'E241']
+# per-file-ignores = [
+#     '__init__.py:F401',
+# ]
+max-line-length = 88
+count = true

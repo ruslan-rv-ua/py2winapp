@@ -29,7 +29,8 @@ class Dwwnloader:
         Args:
             url (str): The URL of the file to download.
             local_file_path (Path): The local file path to save the downloaded file to.
-            chunk_size (int, optional): The size of each chunk to download. Defaults to 128.
+            chunk_size (int, optional): The size of each chunk to download.
+            Defaults to 128.
         """
         resp = requests.get(url, stream=True)
         with open(local_file_path, "wb") as file:
