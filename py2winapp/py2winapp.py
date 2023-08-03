@@ -59,9 +59,14 @@ DEFAULT_BUILD_DIR = "build"  # ensure this is in .gitignore
 DEFAULT_DIST_DIR = "dist"  # ensure this is in .gitignore
 DEFAULT_DIST_DIR = "dist3"  #! debug only
 DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
+
+DEFAULT_MAIN_FILE = "main.py"
+DEFAULT_REQUIREMENTS_FILE = "requirements.txt"
+
 DEFAULT_LOG_FILE = "py2winapp.log"
 
 DEFAULT_PYDIST_DIR = "python"
+DEFAULT_SOURCE_DIR = "."
 
 
 ######################################################################
@@ -215,15 +220,15 @@ def log_build_data(build_data: BuildData) -> None:
 def make_build_data(
     python_version: Union[str, None],
     app_name: Union[str, None],
-    input_source_dir: str,
-    main_file: str,
+    input_source_dir: Union[str, None],
+    main_file: Union[str, None],
     ignore_input_patterns: List[str],
     app_dir: Union[str, None],
     show_console: bool,
-    requirements_file: str,
-    extra_pip_install_args: Iterable[str],
-    python_dir: str,
-    source_dir: str,
+    requirements_file: Union[str, None],
+    extra_pip_install_args: List[str],
+    python_dir: Union[str, None],
+    source_dir: Union[str, None],
     exe_file: Union[str, None],
     icon_file: Union[str, Path, None],
     make_zip: bool,
@@ -232,11 +237,27 @@ def make_build_data(
     if python_version is None:
         # user current interpreter's version
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-        logger.info(
+        logger.warning(
             f"Python version not specified, using current interpreter's version: {python_version!r}"
         )
 
     project_path = Path.cwd()
+
+    # input source dir
+    if input_source_dir is None:
+        input_source_dir = project_path.name.replace(
+            "-", "_"
+        )  # use project name with underscores
+        logger.warning(
+            f"Input source dir not specified, using project name: {input_source_dir!r}."
+        )
+    input_source_dir_path = project_path / input_source_dir
+
+    # main file
+    if main_file is None:
+        main_file = DEFAULT_MAIN_FILE
+        logger.warning(f"Main file not specified, using default: {main_file!r}.")
+    main_file_path = input_source_dir_path / main_file
 
     build_dir_path = project_path / DEFAULT_BUILD_DIR
     dist_dir_path = project_path / DEFAULT_DIST_DIR
@@ -245,6 +266,7 @@ def make_build_data(
     if app_name is None:
         app_name = project_path.name
         logger.info(f"App name not specified, using project name: `{app_name}`.")
+
     app_name_slug = slugify(app_name)
 
     if app_dir is None:
@@ -252,13 +274,24 @@ def make_build_data(
         logger.debug(f"App dir not specified, using app name slug: {app_dir!r} ")
     app_dir_path = build_dir_path / app_dir
 
-    input_source_dir_path = project_path / input_source_dir
-
-    main_file_path = input_source_dir_path / main_file
-
+    # requirements file
+    if requirements_file is None:
+        requirements_file = DEFAULT_REQUIREMENTS_FILE
+        logger.debug(
+            f"Requirements file not specified, using default: {requirements_file!r}."
+        )
     requirements_file_path = project_path / requirements_file
 
+    # python dir
+    if python_dir is None:
+        python_dir = DEFAULT_PYDIST_DIR
+        logger.debug(f"Python dir not specified, using default: {python_dir!r}.")
     python_dir_path = app_dir_path / python_dir
+
+    # source dir
+    if source_dir is None:
+        source_dir = DEFAULT_SOURCE_DIR
+        logger.debug(f"Source dir not specified, using default: {source_dir!r}.")
     source_dir_path = app_dir_path / source_dir
 
     if icon_file is not None:
@@ -314,14 +347,16 @@ def make_build_data(
 ######################################################################
 # build
 ######################################################################
-
-
 def build(
-    input_source_dir: str,  # where the source code is
-    main_file: str,  # relative to input_source_dir, the main file to run, e.g. `main.py`
     python_version: Union[
         str, None
     ] = None,  # python version to use. If None, use current interpreter's version
+    input_source_dir: Union[
+        str, None
+    ] = None,  # where the source code is. If None, use project's directory
+    main_file: Union[
+        str, None
+    ] = None,  # relative to input_source_dir, the main file to run. If None, use "main.py"
     app_name: Union[
         str, None
     ] = None,  # name of the app. If None, use project's directory name
@@ -331,16 +366,18 @@ def build(
     ] = None,  # where to put the app under `dist` directory (relative to project_dir)
     show_console: bool = False,  # show console or not when running the app
     requirements_file: str = "requirements.txt",
-    extra_pip_install_args: Iterable[str] = (),  # extra arguments to pip install
+    extra_pip_install_args: List[
+        str
+    ] = [],  # extra args to pass for "pip install" command
     python_dir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files (relative to app_dir)
     source_dir: str = "",  # where to put source files (relative to app_dir)
     exe_file: Union[
         str, None
     ] = None,  # name of the exe file. If None, use app_name_slug
     icon_file: Union[str, Path, None] = None,  # icon file to use for the app
-    make_zip: bool = False,  # make a zip file of the app
+    make_dist: bool = False,  # make a zip file of the app under `dist` directory or not
 ) -> BuildData:
-    logger.info("Gethering build data...")
+    logger.info("Collecting build data...")
     build_data = make_build_data(
         python_version=python_version,
         input_source_dir=input_source_dir,
@@ -355,7 +392,7 @@ def build(
         source_dir=source_dir,
         exe_file=exe_file,
         icon_file=icon_file,
-        make_zip=make_zip,
+        make_zip=make_dist,
     )
     log_build_data(build_data=build_data)
 
@@ -389,7 +426,7 @@ def build(
     logger.info("Generating startup executable...")
     make_startup_exe(build_data=build_data)
 
-    if make_zip:
+    if make_dist:
         logger.info("Making zip file...")
         make_zip_file(build_data=build_data)
 
