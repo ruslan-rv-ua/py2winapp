@@ -129,84 +129,79 @@ class BuildData:
     download_dir_path: Path
 
 
-def check_build_data(build_data: BuildData) -> int:
-    errors_count = 0
-
+def check_build_data(build_data: BuildData) -> None:
     # python_version can be anything of the form:
     # `x.x.x` where any x may be set to a positive integer.
     python_version_regex = re.compile(r"^(\d+|x)\.(\d+|x)\.(\d+|x)$")
     if re.match(python_version_regex, build_data.python_version) is None:
-        errors_count += 1
         logger.error(
             f"Specified python version {build_data.python_version!r} "
             "does not have the correct format, "
             'it should be of format: "x.x.x" where "x" is a positive number.'
         )
+        raise ValueError(
+            f"Invalid python version specified: {build_data.python_version}"
+        )
 
     # check project path
     if not build_data.project_path.exists():
-        errors_count += 1
         logger.error(f"Project path {build_data.project_path!r} does not exist.")
+        raise ValueError(f"Project path {build_data.project_path!r} not found.")
     elif not build_data.project_path.is_dir():
-        errors_count += 1
         logger.error(f"Project path {build_data.project_path!r} is not a directory.")
+        raise ValueError(
+            f"Project path {build_data.project_path!r} is not a directory."
+        )
 
     # check input source dir
     if not build_data.input_source_dir_path.exists():
-        errors_count += 1
         logger.error(
             f"Input source dir {build_data.input_source_dir_path!r} does not exist."
         )
+        raise ValueError(
+            f"Input source dir {build_data.input_source_dir_path!r} not found."
+        )
     elif not build_data.input_source_dir_path.is_dir():
-        errors_count += 1
         logger.error(
+            f"Input source dir {build_data.input_source_dir_path!r} is not a directory."
+        )
+        raise ValueError(
             f"Input source dir {build_data.input_source_dir_path!r} is not a directory."
         )
 
     # check main file
     if not build_data.main_file_path.exists():
-        errors_count += 1
         logger.error(f"Main file {build_data.main_file_path!r} does not exist.")
+        raise ValueError(f"Main file {build_data.main_file_path!r} not found.")
     elif not build_data.main_file_path.is_file():
-        errors_count += 1
         logger.error(f"Main file {build_data.main_file_path!r} is not a file.")
-    elif build_data.main_file_path.suffix != ".py":
-        errors_count += 1
-        logger.error(
-            f"Main file {build_data.main_file_path!r} does not have the `.py` extension."
-        )
+        raise ValueError(f"Main file {build_data.main_file_path!r} is not a file.")
 
     # check requirements file
     if not build_data.requirements_file_path.exists():
-        errors_count += 1
         logger.error(
             f"Requirements file {build_data.requirements_file_path!r} does not exist."
         )
-    elif not build_data.requirements_file_path.is_file():
-        errors_count += 1
-        logger.error(
-            f"Requirements file {build_data.requirements_file_path!r} is not a file."
+        raise ValueError(
+            f"Requirements file {build_data.requirements_file_path!r} not found."
         )
     else:
         req_checker = RequirementsFile.from_file(str(build_data.requirements_file_path))
         if req_checker.invalid_lines:
             for line in req_checker.invalid_lines:
-                errors_count += 1
                 logger.error(
                     f"Error in requirements file: {line.filename}:{line.line_number}"
                 )
                 logger.error(line.error_message)
+            raise ValueError(
+                f"Requirements file {build_data.requirements_file_path!r} contains errors."
+            )
 
     # check icon file
     if build_data.icon_file_path is not None:
         if not build_data.icon_file_path.exists():
-            errors_count += 1
             logger.error(f"Icon file {build_data.icon_file_path!r} does not exist.")
-        elif not build_data.icon_file_path.is_file():
-            errors_count += 1
-            logger.error(f"Icon file {build_data.icon_file_path!r} is not a file.")
-
-    return errors_count
+            raise ValueError(f"Icon file {build_data.icon_file_path!r} not found.")
 
 
 def log_build_data(build_data: BuildData) -> None:
@@ -399,7 +394,7 @@ def build(
     errors_count = 0
 
     logger.info("Checking build data...")
-    errors_count += check_build_data(build_data=build_data)
+    check_build_data(build_data=build_data)
 
     logger.info("Creating app directory...")
     create_files_infrastructure(build_data=build_data)
@@ -421,22 +416,16 @@ def build(
     (build_data.python_dir_path / GETPIPPY_FILE).unlink()
 
     logger.info("Installing requirements...")
-    errors_count += install_requirements_txt_file(build_data=build_data)
+    install_requirements_txt_file(build_data=build_data)
 
     logger.info("Generating startup executable...")
     make_startup_exe(build_data=build_data)
 
     if make_dist:
-        logger.info("Making zip file...")
+        logger.info("Making dist zip file...")
         make_zip_file(build_data=build_data)
 
-    if errors_count > 0:
-        logger.critical(f"Build failed with {errors_count} errors!")
-        logger.critical("Fix the errors and try again.")
-        logger.critical(f"Check the log {DEFAULT_LOG_FILE!r} for more details.")
-        sys.exit(1)
-    else:
-        logger.success(f"Build succeeded!")
+    logger.success("Done!")
 
     return build_data
 
@@ -571,7 +560,7 @@ def install_pip(pydist_dir_path: Path) -> None:
         raise RuntimeError("Can not install `pip` with `get-pip.py`!")
 
 
-def install_requirements_txt_file(build_data: BuildData) -> int:
+def install_requirements_txt_file(build_data: BuildData) -> None:
     logger.debug(f"Requirements file path: {build_data.requirements_file_path!r}")
 
     if build_data.extra_pip_install_args:
@@ -587,17 +576,26 @@ def install_requirements_txt_file(build_data: BuildData) -> int:
     )
     try:
         execute_os_command(command=command, cwd=str(scripts_dir_path))
-        return 0
+        return
     except Exception as e:
-        pass
-    logger.warning(
+        error_message = str(e)
+    logger.error(error_message)
+    logger.error(
         f"Failed to install requirements from {build_data.requirements_file_path!r}. "
-        "Trying to install requirements one by one ..."
     )
-    return install_requirements_txt_1by1(build_data)
+
+    # try to install requirements one by one
+    """ #!
+    logger.error("Trying to install requirements one by one.")
+    install_requirements_txt_1by1(build_data)
+    """
+
+    raise RuntimeError(
+        f"Failed to install requirements from {build_data.requirements_file_path!r}. "
+    )
 
 
-def install_requirements_txt_1by1(build_data: BuildData) -> int:
+def install_requirements_txt_1by1(build_data: BuildData) -> None:
     requirements = build_data.requirements_file_path.read_text().splitlines()
     if build_data.extra_pip_install_args:
         extra_args_str = extra_args_str = " " + " ".join(
@@ -627,8 +625,8 @@ def install_requirements_txt_1by1(build_data: BuildData) -> int:
         )
         logger.error(f"Failed to install {len(failed_to_install_modules)} modules")
         logger.error("See FAILED_TO_INSTALL_MODULES.txt for more info")
-        return len(failed_to_install_modules)
-    return 0
+        return
+    return
 
 
 def make_startup_exe(build_data: BuildData) -> None:
