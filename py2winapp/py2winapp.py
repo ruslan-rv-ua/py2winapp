@@ -57,7 +57,6 @@ DEFAULT_IGNORE_PATTERNS = [
 
 DEFAULT_BUILD_DIR = "build"  # ensure this is in .gitignore
 DEFAULT_DIST_DIR = "dist"  # ensure this is in .gitignore
-DEFAULT_DIST_DIR = "dist3"  #! debug only
 DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
 
 DEFAULT_MAIN_FILE = "main.py"
@@ -103,6 +102,9 @@ def setup_logger() -> int:
 class BuildData:
     python_version: str
     project_path: Path
+    build_dir_path: Path
+    dist_dir_path: Path
+    download_dir_path: Path
     app_name: str
     app_name_slug: str
     input_source_dir: str
@@ -112,21 +114,18 @@ class BuildData:
     main_file_path: Path
     app_dir: str
     app_dir_path: Path
-    show_console: bool
-    requirements_file: str
-    requirements_file_path: Path
-    extra_pip_install_args: Iterable[str]
     python_dir: str
     python_dir_path: Path
     source_dir: str
     source_dir_path: Path
+    requirements_file: str
+    requirements_file_path: Path
+    extra_pip_install_args: List[str]
     exe_file: str
     exe_file_path: Path
     icon_file_path: Union[Path, None]
+    show_console: bool
     zip_file_path: Union[Path, None]
-    build_dir_path: Path
-    dist_dir_path: Path
-    download_dir_path: Path
 
 
 def check_build_data(build_data: BuildData) -> None:
@@ -214,6 +213,7 @@ def log_build_data(build_data: BuildData) -> None:
 
 def make_build_data(
     python_version: Union[str, None],
+    project_path: Union[str, Path, None],
     app_name: Union[str, None],
     input_source_dir: Union[str, None],
     main_file: Union[str, None],
@@ -226,7 +226,7 @@ def make_build_data(
     source_dir: Union[str, None],
     exe_file: Union[str, None],
     icon_file: Union[str, Path, None],
-    make_zip: bool,
+    make_dist: bool,
 ) -> BuildData:
     # Python version
     if python_version is None:
@@ -236,7 +236,13 @@ def make_build_data(
             f"Python version not specified, using current interpreter's version: {python_version!r}"
         )
 
-    project_path = Path.cwd()
+    # project path
+    if project_path is None:
+        project_path = Path.cwd()
+        logger.warning(
+            f"Project path not specified, using current working directory: {project_path!r}"
+        )
+    project_path = Path(project_path).resolve()
 
     # input source dir
     if input_source_dir is None:
@@ -307,7 +313,7 @@ def make_build_data(
             exe_file += ".exe"
     exe_file_path = app_dir_path / exe_file
 
-    zip_file_path = dist_dir_path / f"{app_dir}" if make_zip else None
+    zip_file_path = dist_dir_path / f"{app_dir}" if make_dist else None
 
     return BuildData(
         python_version=python_version,
@@ -346,6 +352,9 @@ def build(
     python_version: Union[
         str, None
     ] = None,  # python version to use. If None, use current interpreter's version
+    project_path: Union[
+        str, Path, None
+    ] = None,  # project's directory. If None, use current working directory
     input_source_dir: Union[
         str, None
     ] = None,  # where the source code is. If None, use project's directory
@@ -370,11 +379,12 @@ def build(
         str, None
     ] = None,  # name of the exe file. If None, use app_name_slug
     icon_file: Union[str, Path, None] = None,  # icon file to use for the app
-    make_dist: bool = False,  # make a zip file of the app under `dist` directory or not
+    make_dist: bool = True,  # make a zip file of the app under `dist` directory or not
 ) -> BuildData:
     logger.info("Collecting build data...")
     build_data = make_build_data(
         python_version=python_version,
+        project_path=project_path,
         input_source_dir=input_source_dir,
         main_file=main_file,
         app_name=app_name,
@@ -387,11 +397,9 @@ def build(
         source_dir=source_dir,
         exe_file=exe_file,
         icon_file=icon_file,
-        make_zip=make_dist,
+        make_dist=make_dist,
     )
     log_build_data(build_data=build_data)
-
-    errors_count = 0
 
     logger.info("Checking build data...")
     check_build_data(build_data=build_data)
