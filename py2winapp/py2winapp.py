@@ -213,11 +213,11 @@ def log_build_data(build_data: BuildData) -> None:
 
 
 def make_build_data(
-    python_version: str,
+    python_version: Union[str, None],
     app_name: Union[str, None],
     input_source_dir: str,
     main_file: str,
-    ignore_input_patterns: Iterable[str],
+    ignore_input_patterns: List[str],
     app_dir: Union[str, None],
     show_console: bool,
     requirements_file: str,
@@ -228,6 +228,14 @@ def make_build_data(
     icon_file: Union[str, Path, None],
     make_zip: bool,
 ) -> BuildData:
+    # Python version
+    if python_version is None:
+        # user current interpreter's version
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        logger.info(
+            f"Python version not specified, using current interpreter's version: {python_version!r}"
+        )
+
     project_path = Path.cwd()
 
     build_dir_path = project_path / DEFAULT_BUILD_DIR
@@ -309,13 +317,15 @@ def make_build_data(
 
 
 def build(
-    python_version: str,  # python version to use
     input_source_dir: str,  # where the source code is
     main_file: str,  # relative to input_source_dir, the main file to run, e.g. `main.py`
+    python_version: Union[
+        str, None
+    ] = None,  # python version to use. If None, use current interpreter's version
     app_name: Union[
         str, None
     ] = None,  # name of the app. If None, use project's directory name
-    ignore_input_patterns: Iterable[str] = (),  # patterns to ignore in input_dir
+    ignore_input_patterns: Iterable[str] = [],  # patterns to ignore in input_dir
     app_dir: Union[
         str, None
     ] = None,  # where to put the app under `dist` directory (relative to project_dir)
@@ -336,7 +346,7 @@ def build(
         input_source_dir=input_source_dir,
         main_file=main_file,
         app_name=app_name,
-        ignore_input_patterns=ignore_input_patterns,
+        ignore_input_patterns=list(ignore_input_patterns),
         app_dir=app_dir,
         show_console=show_console,
         requirements_file=requirements_file,
