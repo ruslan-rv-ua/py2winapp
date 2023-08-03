@@ -55,6 +55,7 @@ DEFAULT_IGNORE_PATTERNS = [
     "build.py",
 ]
 
+DEFAULT_BUILD_DIR = "build"  # ensure this is in .gitignore
 DEFAULT_DIST_DIR = "dist"  # ensure this is in .gitignore
 DEFAULT_DIST_DIR = "dist3"  #! debug only
 DEFAULT_DOWNLOAD_DIR = "downloads"  # ensure this is in .gitignore
@@ -99,7 +100,6 @@ class BuildData:
     project_path: Path
     app_name: str
     app_name_slug: str
-    dist_dir_path: Path
     input_source_dir: str
     input_source_dir_path: Path
     ignore_input_patterns: List[str]
@@ -119,6 +119,8 @@ class BuildData:
     exe_file_path: Path
     icon_file_path: Union[Path, None]
     zip_file_path: Union[Path, None]
+    build_dir_path: Path
+    dist_dir_path: Path
     download_dir_path: Path
 
 
@@ -199,17 +201,6 @@ def check_build_data(build_data: BuildData) -> int:
             errors_count += 1
             logger.error(f"Icon file {build_data.icon_file_path!r} is not a file.")
 
-    # check download dir
-    if not build_data.download_dir_path.exists():
-        # make it
-        logger.info(f"Creating download dir {build_data.download_dir_path!r}")
-        build_data.download_dir_path.mkdir(parents=True)
-    elif not build_data.download_dir_path.is_dir():
-        errors_count += 1
-        logger.error(
-            f"Download dir {build_data.download_dir_path!r} is not a directory."
-        )
-
     return errors_count
 
 
@@ -239,17 +230,19 @@ def make_build_data(
 ) -> BuildData:
     project_path = Path.cwd()
 
+    build_dir_path = project_path / DEFAULT_BUILD_DIR
+    dist_dir_path = project_path / DEFAULT_DIST_DIR
+    download_dir_path = project_path / DEFAULT_DOWNLOAD_DIR
+
     if app_name is None:
         app_name = project_path.name
         logger.info(f"App name not specified, using project name: `{app_name}`.")
-    app_name_slug = slugify(app_name, decimal=False)
-
-    dist_dir_path = project_path / DEFAULT_DIST_DIR
+    app_name_slug = slugify(app_name)
 
     if app_dir is None:
         app_dir = app_name_slug
         logger.debug(f"App dir not specified, using app name slug: {app_dir!r} ")
-    app_dir_path = dist_dir_path / app_dir
+    app_dir_path = build_dir_path / app_dir
 
     input_source_dir_path = project_path / input_source_dir
 
@@ -267,9 +260,6 @@ def make_build_data(
     else:
         icon_file_path = None
 
-    download_dir_path = project_path / DEFAULT_DOWNLOAD_DIR
-    download_dir_path.mkdir(exist_ok=True)
-
     if exe_file is None:
         exe_file = f"{app_name_slug}.exe"
         logger.info(
@@ -281,14 +271,13 @@ def make_build_data(
             exe_file += ".exe"
     exe_file_path = app_dir_path / exe_file
 
-    zip_file_path = app_dir_path / f"{app_dir}.zip" if make_zip else None
+    zip_file_path = dist_dir_path / f"{app_dir}" if make_zip else None
 
     return BuildData(
         python_version=python_version,
         project_path=project_path,
         app_name=app_name,
         app_name_slug=app_name_slug,
-        dist_dir_path=dist_dir_path,
         input_source_dir=input_source_dir,
         input_source_dir_path=input_source_dir_path,
         ignore_input_patterns=list(ignore_input_patterns),
@@ -308,6 +297,8 @@ def make_build_data(
         exe_file_path=exe_file_path,
         icon_file_path=icon_file_path,
         zip_file_path=zip_file_path,
+        build_dir_path=build_dir_path,
+        dist_dir_path=dist_dir_path,
         download_dir_path=download_dir_path,
     )
 
@@ -364,7 +355,7 @@ def build(
     errors_count += check_build_data(build_data=build_data)
 
     logger.info("Creating app directory...")
-    make_app_dir(build_data=build_data)
+    create_files_infrastructure(build_data=build_data)
 
     logger.info("Copying source files...")
     copy_source_files(build_data=build_data)
@@ -408,13 +399,19 @@ def build(
 ######################################################################
 
 
-def make_app_dir(build_data: BuildData) -> None:
-    if build_data.dist_dir_path.is_dir():
-        logger.debug(f"Deleting existing dist directory {build_data.dist_dir_path!r}")
-        shutil.rmtree(build_data.dist_dir_path)
+def create_files_infrastructure(build_data: BuildData) -> None:
+    build_data.build_dir_path.mkdir(exist_ok=True)
+    build_data.dist_dir_path.mkdir(exist_ok=True)
+    build_data.download_dir_path.mkdir(exist_ok=True)
+
     logger.debug(f"Creating app directory {build_data.app_dir_path!r}")
-    build_data.dist_dir_path.mkdir()
-    build_data.app_dir_path.mkdir()
+    build_data.app_dir_path.mkdir(exist_ok=True)
+    # clean app directory
+    for file_path in build_data.app_dir_path.iterdir():
+        if file_path.is_file():
+            file_path.unlink()
+        elif file_path.is_dir():
+            shutil.rmtree(file_path)
 
 
 def copy_source_files(build_data: BuildData) -> None:
@@ -622,12 +619,10 @@ def make_startup_exe(build_data: BuildData) -> None:
 
 
 def make_zip_file(build_data: BuildData) -> None:
-    destination_dir = build_data.dist_dir_path
-    zip_file_path = Path(destination_dir) / build_data.app_dir_path.name
-    root_dir = build_data.dist_dir_path
-    logger.debug(f"Making zip file {zip_file_path!r}")
+    logger.debug(f"Making zip file {build_data.zip_file_path!r}")
+    root_dir = build_data.build_dir_path
     shutil.make_archive(
-        base_name=str(zip_file_path),
+        base_name=str(build_data.zip_file_path),
         format="zip",
         root_dir=str(root_dir),
         base_dir=str(build_data.app_dir_path.relative_to(root_dir)),
