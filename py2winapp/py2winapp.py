@@ -1,11 +1,10 @@
-"""py2winapp.py
+"""py2winapp.
 
-This script is used to create a Windows executable from a Python script.
+This script is used to create a Windows application from a Python project.
 
 TODO:
 - test if source dir is not a app dir
 - chore:
-    - add docstrings
     - README.md
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
@@ -70,7 +69,7 @@ DEFAULT_SOURCE_DIR = "."
 ######################################################################
 
 
-def setup_logger() -> int:
+def _setup_logger() -> int:
     log_file_path = Path.cwd() / DEFAULT_LOG_FILE
     if log_file_path.exists():
         log_file_path.unlink()
@@ -97,6 +96,32 @@ def setup_logger() -> int:
 
 @dataclass
 class BuildData:
+    """A class representing the data required to build a Windows application."""
+
+    python_version: str
+    project_path: Path
+    build_dir_path: Path
+    dist_dir_path: Path
+    download_dir_path: Path
+    app_name: str
+    app_name_slug: str
+    input_source_dir: str
+    input_source_dir_path: Path
+    ignore_input_patterns: List[str]
+    main_file: str
+    main_file_path: Path
+    app_dir: str
+    app_dir_path: Path
+    python_dir: str
+    python_dir_path: Path
+    source_dir: str
+    source_dir_path: Path
+    requirements_file: str
+    requirements_file_path: Path
+    extra_pip_install_args: List[str]
+    exe_file: str
+    exe_file_path: Path
+    icon_file_path: Union[Path, None]
     python_version: str
     project_path: Path
     build_dir_path: Path
@@ -125,7 +150,7 @@ class BuildData:
     zip_file_path: Union[Path, None]
 
 
-def check_build_data(build_data: BuildData) -> None:
+def _check_build_data(build_data: BuildData) -> None:
     # python_version can be anything of the form:
     # `x.x.x` where any x may be set to a positive integer.
     python_version_regex = re.compile(r"^(\d+|x)\.(\d+|x)\.(\d+|x)$")
@@ -201,7 +226,7 @@ def check_build_data(build_data: BuildData) -> None:
             raise ValueError(f"Icon file {build_data.icon_file_path!r} not found.")
 
 
-def log_build_data(build_data: BuildData) -> None:
+def _log_build_data(build_data: BuildData) -> None:
     # debug build data, all attributes of build data are sorted alphabetically
     data_str = "\n".join(
         f"{attr:>22}: {value!r}" for attr, value in sorted(vars(build_data).items())
@@ -209,7 +234,7 @@ def log_build_data(build_data: BuildData) -> None:
     logger.debug(f"Build data:\n{data_str}")
 
 
-def make_build_data(
+def _make_build_data(
     python_version: Union[str, None],
     project_path: Union[str, Path, None],
     app_name: Union[str, None],
@@ -352,42 +377,62 @@ def make_build_data(
 # build
 ######################################################################
 def build(
-    python_version: Union[
-        str, None
-    ] = None,  # python version to use. If None, use current interpreter's version
-    project_path: Union[
-        str, Path, None
-    ] = None,  # project's directory. If None, use current working directory
-    input_source_dir: Union[
-        str, None
-    ] = None,  # where the source code is. If None, use project's directory
-    main_file: Union[
-        str, None
-    ] = None,  # relative to input_source_dir, the main file to run.
-    # If None, use "main.py"
-    app_name: Union[
-        str, None
-    ] = None,  # name of the app. If None, use project's directory name
-    ignore_input_patterns: Iterable[str] = [],  # patterns to ignore in input_dir
-    app_dir: Union[
-        str, None
-    ] = None,  # where to put the app under `dist` directory (relative to project_dir)
-    show_console: bool = False,  # show console or not when running the app
+    python_version: Union[str, None] = None,
+    project_path: Union[str, Path, None] = None,
+    input_source_dir: Union[str, None] = None,
+    main_file: Union[str, None] = None,
+    app_name: Union[str, None] = None,
+    ignore_input_patterns: Iterable[str] = [],
+    app_dir: Union[str, None] = None,
+    show_console: bool = False,
     requirements_file: str = "requirements.txt",
-    extra_pip_install_args: List[
-        str
-    ] = [],  # extra args to pass for "pip install" command
-    python_dir: str = DEFAULT_PYDIST_DIR,  # where to put python distribution files
-    # (relative to app_dir)
-    source_dir: str = "",  # where to put source files (relative to app_dir)
-    exe_file: Union[
-        str, None
-    ] = None,  # name of the exe file. If None, use app_name_slug
-    icon_file: Union[str, Path, None] = None,  # icon file to use for the app
-    make_dist: bool = True,  # make a zip file of the app under `dist` directory or not
+    extra_pip_install_args: List[str] = [],
+    python_dir: str = DEFAULT_PYDIST_DIR,
+    source_dir: str = "",
+    exe_file: Union[str, None] = None,
+    icon_file: Union[str, Path, None] = None,
+    make_dist: bool = True,
 ) -> BuildData:
+    """Build a Windows executable from a Python project.
+
+    Args:
+        python_version (Union[str, None], optional): Python version to use.
+            If None, use current interpreter's version. Defaults to None.
+        project_path (Union[str, Path, None], optional): Project's directory.
+            If None, use current working directory. Defaults to None.
+        input_source_dir (Union[str, None], optional): Where the source code is.
+            If None, use project's directory. Defaults to None.
+        main_file (Union[str, None], optional): Relative to input_source_dir,
+            the main file to run. If None, use "main.py". Defaults to None.
+        app_name (Union[str, None], optional): Name of the app.
+            If None, use project's directory name. Defaults to None.
+        ignore_input_patterns (Iterable[str], optional): Patterns to ignore in
+            input_dir. Defaults to [].
+        app_dir (Union[str, None], optional):
+            Where to put the app under `dist` directory (relative to project_dir).
+            Defaults to None.
+        show_console (bool, optional): Show console or not when running the app.
+            Defaults to False.
+        requirements_file (str, optional): Name of the requirements file.
+            Defaults to "requirements.txt".
+        extra_pip_install_args (List[str], optional): Extra args to pass for
+            "pip install" command. Defaults to [].
+        python_dir (str, optional): Where to put python distribution
+            files (relative to app_dir). Defaults to DEFAULT_PYDIST_DIR.
+        source_dir (str, optional): Where to put source files (relative to app_dir).
+            Defaults to "".
+        exe_file (Union[str, None], optional): Name of the exe file.
+            If None, use app_name_slug. Defaults to None.
+        icon_file (Union[str, Path, None], optional): Icon file to use for the app.
+            If None, use default icon. Defaults to None.
+        make_dist (bool, optional): Make a zip file of the app under `dist` directory
+            or not. Defaults to True.
+
+    Returns:
+        BuildData: A data object containing information about the build process.
+    """
     logger.info("Collecting build data...")
-    build_data = make_build_data(
+    build_data = _make_build_data(
         python_version=python_version,
         project_path=project_path,
         input_source_dir=input_source_dir,
@@ -404,39 +449,39 @@ def build(
         icon_file=icon_file,
         make_dist=make_dist,
     )
-    log_build_data(build_data=build_data)
+    _log_build_data(build_data=build_data)
 
     logger.info("Checking build data...")
-    check_build_data(build_data=build_data)
+    _check_build_data(build_data=build_data)
 
     logger.info("Creating app directory...")
-    create_files_infrastructure(build_data=build_data)
+    _create_files_infrastructure(build_data=build_data)
 
     logger.info("Copying source files...")
-    copy_source_files(build_data=build_data)
+    _copy_source_files(build_data=build_data)
 
     logger.info("Getting python distribution...")
-    get_python_dist(build_data=build_data)
+    _get_python_dist(build_data=build_data)
 
     logger.info("Getting pip...")
     get_getpippy(build_data=build_data)
 
     logger.info("Installing pip...")
     prepare_for_pip_install(build_data=build_data)
-    install_pip(pydist_dir_path=build_data.python_dir_path)
+    _install_pip(pydist_dir_path=build_data.python_dir_path)
 
     # delete `get_pip.py` from build directory cause it waists more than 2.5MB
     (build_data.python_dir_path / GETPIPPY_FILE).unlink()
 
     logger.info("Installing requirements...")
-    install_requirements_txt_file(build_data=build_data)
+    _install_requirements_txt_file(build_data=build_data)
 
     logger.info("Generating startup executable...")
-    make_startup_exe(build_data=build_data)
+    _make_startup_exe(build_data=build_data)
 
     if make_dist:
         logger.info("Making dist zip file...")
-        make_zip_file(build_data=build_data)
+        _make_zip_file(build_data=build_data)
 
     logger.success("Done!")
 
@@ -448,7 +493,7 @@ def build(
 ######################################################################
 
 
-def create_files_infrastructure(build_data: BuildData) -> None:
+def _create_files_infrastructure(build_data: BuildData) -> None:
     build_data.build_dir_path.mkdir(exist_ok=True)
     build_data.dist_dir_path.mkdir(exist_ok=True)
     build_data.download_dir_path.mkdir(exist_ok=True)
@@ -463,7 +508,7 @@ def create_files_infrastructure(build_data: BuildData) -> None:
             shutil.rmtree(file_path)
 
 
-def copy_source_files(build_data: BuildData) -> None:
+def _copy_source_files(build_data: BuildData) -> None:
     ignore_patterns = build_data.ignore_input_patterns
     ignore_patterns.append(build_data.app_dir)
     ignore_patterns += DEFAULT_IGNORE_PATTERNS
@@ -481,7 +526,7 @@ def copy_source_files(build_data: BuildData) -> None:
     )
 
 
-def get_python_dist(build_data: BuildData) -> None:
+def _get_python_dist(build_data: BuildData) -> None:
     # download python zip file
     downloader = Dwwnloader(build_data.download_dir_path)
     # python zip file name is like `python-3.9.1-embed-amd64.zip`
@@ -495,15 +540,14 @@ def get_python_dist(build_data: BuildData) -> None:
     logger.debug(
         f"Extracting {downloaded_python_zip_path!r} to {build_data.python_dir_path!r}"
     )
-    unzip(
+    _unzip(
         zip_file_path=downloaded_python_zip_path,
         destination_dir_path=build_data.python_dir_path,
     )
 
 
 def get_getpippy(build_data: BuildData) -> None:
-    """
-    Downloads `get-pip.py` and copies it to the python distribution directory.
+    """Download `get-pip.py` and copies it to the python distribution directory.
 
     Args:
         build_data (BuildData): The build data object.
@@ -520,8 +564,8 @@ def get_getpippy(build_data: BuildData) -> None:
 
 
 def prepare_for_pip_install(build_data: BuildData) -> None:
-    """
-    Prepare the extracted embedded python version for pip installation:
+    """Prepare the extracted embedded python version for pip installation.
+
     - Uncomment `import site` line from `pythonXX._pth` file
     - Extract `pythonXX.zip` zip file to `pythonXX.zip` folder
     - delete `pythonXX.zip` zip file
@@ -562,12 +606,12 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
     pythonzip_file_path = pythonzip_file_path.rename(
         pythonzip_file_path.with_suffix(".temp_zip")
     )
-    unzip(pythonzip_file_path, pythonzip_dir_path)
+    _unzip(pythonzip_file_path, pythonzip_dir_path)
     pythonzip_file_path.unlink()
 
 
-def install_pip(pydist_dir_path: Path) -> None:
-    execute_os_command(
+def _install_pip(pydist_dir_path: Path) -> None:
+    _execute_os_command(
         command="python.exe get-pip.py --no-warn-script-location",
         cwd=str(pydist_dir_path),
     )
@@ -575,7 +619,7 @@ def install_pip(pydist_dir_path: Path) -> None:
         raise RuntimeError("Can not install `pip` with `get-pip.py`!")
 
 
-def install_requirements_txt_file(build_data: BuildData) -> None:
+def _install_requirements_txt_file(build_data: BuildData) -> None:
     logger.debug(f"Requirements file path: {build_data.requirements_file_path!r}")
 
     if build_data.extra_pip_install_args:
@@ -590,7 +634,7 @@ def install_requirements_txt_file(build_data: BuildData) -> None:
         f"-r {str(build_data.requirements_file_path)}{extra_args_str}"
     )
     try:
-        execute_os_command(command=command, cwd=str(scripts_dir_path))
+        _execute_os_command(command=command, cwd=str(scripts_dir_path))
         return
     except Exception as e:
         error_message = str(e)
@@ -610,7 +654,7 @@ def install_requirements_txt_file(build_data: BuildData) -> None:
     )
 
 
-def install_requirements_txt_1by1(build_data: BuildData) -> None:
+def _install_requirements_txt_1by1(build_data: BuildData) -> None:
     requirements = build_data.requirements_file_path.read_text().splitlines()
     if build_data.extra_pip_install_args:
         extra_args_str = extra_args_str = " " + " ".join(
@@ -629,7 +673,7 @@ def install_requirements_txt_1by1(build_data: BuildData) -> None:
             f"{module}{extra_args_str}"
         )
         try:
-            execute_os_command(command=command, cwd=str(scripts_dir_path))
+            _execute_os_command(command=command, cwd=str(scripts_dir_path))
         except Exception:
             logger.error(f"FAILED TO INSTALL {module!r}")
             failed_to_install_modules.append(module)
@@ -644,7 +688,7 @@ def install_requirements_txt_1by1(build_data: BuildData) -> None:
     return
 
 
-def make_startup_exe(build_data: BuildData) -> None:
+def _make_startup_exe(build_data: BuildData) -> None:
     relative_pydist_dir = build_data.python_dir_path.relative_to(
         build_data.app_dir_path
     )
@@ -678,7 +722,7 @@ def make_startup_exe(build_data: BuildData) -> None:
             )
 
 
-def make_zip_file(build_data: BuildData) -> None:
+def _make_zip_file(build_data: BuildData) -> None:
     logger.debug(f"Making zip file {build_data.zip_file_path!r}")
     root_dir = build_data.build_dir_path
     shutil.make_archive(
@@ -694,7 +738,7 @@ def make_zip_file(build_data: BuildData) -> None:
 ######################################################################
 
 
-def unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
+def _unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
     """
     Extract all files from a zip archive to a destination directory.
 
@@ -708,7 +752,7 @@ def unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
         zip_file.extractall(destination_dir_path)
 
 
-def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
+def _execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
     """Execute terminal command.
 
     Args:
@@ -755,4 +799,4 @@ def execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         raise Exception(command, exit_code, output)
 
 
-setup_logger()
+_setup_logger()
