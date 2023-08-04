@@ -395,10 +395,11 @@ def build(
     Args:
         python_version (Union[str, None], optional): Python version to use.
             If None, use current interpreter's version. Defaults to None.
-        project_path (Union[str, Path, None], optional): Project's directory.
+        project_path (Union[str, Path, None], optional): Project's root path.
             If None, use current working directory. Defaults to None.
-        input_source_dir (Union[str, None], optional): Where the source code is.
-            If None, use project's directory. Defaults to None.
+        input_source_dir (Union[str, None], optional): Directory where the
+            source code is, relative to project root.
+            If None, use project's directory name. Defaults to None.
         main_file (Union[str, None], optional): Relative to input_source_dir,
             the main file to run. If None, use "main.py". Defaults to None.
         app_name (Union[str, None], optional): Name of the app.

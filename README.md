@@ -1,3 +1,43 @@
+<!--
+    """Build a Windows executable from a Python project.
+
+    Args:
+        python_version (Union[str, None], optional): Python version to use.
+            If None, use current interpreter's version. Defaults to None.
+        project_path (Union[str, Path, None], optional): Project's directory.
+            If None, use current working directory. Defaults to None.
+        input_source_dir (Union[str, None], optional): Where the source code is.
+            If None, use project's directory. Defaults to None.
+        main_file (Union[str, None], optional): Relative to input_source_dir,
+            the main file to run. If None, use "main.py". Defaults to None.
+        app_name (Union[str, None], optional): Name of the app.
+            If None, use project's directory name. Defaults to None.
+        ignore_input_patterns (Iterable[str], optional): Patterns to ignore in
+            input_dir. Defaults to [].
+        app_dir (Union[str, None], optional):
+            Where to put the app under `dist` directory (relative to project_dir).
+            Defaults to None.
+        show_console (bool, optional): Show console or not when running the app.
+            Defaults to False.
+        requirements_file (str, optional): Name of the requirements file.
+            Defaults to "requirements.txt".
+        extra_pip_install_args (List[str], optional): Extra args to pass for
+            "pip install" command. Defaults to [].
+        python_dir (str, optional): Where to put python distribution
+            files (relative to app_dir). Defaults to DEFAULT_PYDIST_DIR.
+        source_dir (str, optional): Where to put source files (relative to app_dir).
+            Defaults to "".
+        exe_file (Union[str, None], optional): Name of the exe file.
+            If None, use app_name_slug. Defaults to None.
+        icon_file (Union[str, Path, None], optional): Icon file to use for the app.
+            If None, use default icon. Defaults to None.
+        make_dist (bool, optional): Make a zip file of the app under `dist` directory
+            or not. Defaults to True.
+
+    Returns:
+        BuildData: A data object containing information about the build process.
+
+-->
 # py2winapp
 
 Make runnable apps from your python scripts!
@@ -144,7 +184,91 @@ In the project root, we have the following new folders:
     └─── fastapi-desktop.zip
     ```
 
-Do not forget to add `build`, `dist` and `downloads` folders to `.gitignore``.
+Do not forget to add `build`, `dist` and `downloads` folders to `.gitignore`.
+
+##### `build()`
+
+| parameter              | type                             | default            | description                                                                                     |
+| ---------------------- | -------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| python_version         | Union[str, None], optional       | None               | Python version to use. If None, use current interpreter's version.                              |
+| project_path           | Union[str, Path, None], optional | None               | Project's root path. If None, use current working directory.                                    |
+| input_source_dir       | Union[str, None], optional       | None               | Directory where the source code is, relative to project root. If None, use project's directory. |
+| main_file              | Union[str, None], optional       | None               | Relative to input_source_dir, the main file to run. If None, use "main.py".                     |
+| app_name               | Union[str, None], optional       | None               | Name of the app. If None, use project's directory name.                                         |
+| ignore_input_patterns  | Iterable[str], optional          | []                 | Patterns to ignore in input_dir.                                                                |
+| app_dir                | Union[str, None], optional       | None               | Where to put the app under `dist` directory (relative to project_dir).                          |
+| show_console           | bool, optional                   | False              | Show console or not when running the app.                                                       |
+| requirements_file      | str, optional                    | "requirements.txt" | Name of the requirements file.                                                                  |
+| extra_pip_install_args | List[str], optional              | []                 | Extra args to pass for "pip install" command.                                                   |
+| python_dir             | str, optional                    | DEFAULT_PYDIST_DIR | Where to put python distribution files (relative to app_dir).                                   |
+| source_dir             | str, optional                    | ""                 | Where to put source files (relative to app_dir).                                                |
+| exe_file               | Union[str, None], optional       | None               | Name of the exe file. If None, use app_name_slug.                                               |
+| icon_file              | Union[str, Path, None], optional | None               | Icon file to use for the app. If None, use default icon.                                        |
+| make_dist              | bool, optional                   | True               | Make a zip file of the app under `dist` directory or not.                                       |
+
+##### `BuildData`
+
+`build()` returns a `BuildData` object:
+
+```python
+@dataclass
+class BuildData:
+    python_version: str
+    project_path: Path
+    build_dir_path: Path
+    dist_dir_path: Path
+    download_dir_path: Path
+    app_name: str
+    app_name_slug: str
+    input_source_dir: str
+    input_source_dir_path: Path
+    ignore_input_patterns: List[str]
+    main_file: str
+    main_file_path: Path
+    app_dir: str
+    app_dir_path: Path
+    python_dir: str
+    python_dir_path: Path
+    source_dir: str
+    source_dir_path: Path
+    requirements_file: str
+    requirements_file_path: Path
+    extra_pip_install_args: List[str]
+    exe_file: str
+    exe_file_path: Path
+    icon_file_path: Union[Path, None]
+    python_version: str
+    project_path: Path
+    build_dir_path: Path
+    dist_dir_path: Path
+    download_dir_path: Path
+    app_name: str
+    app_name_slug: str
+    input_source_dir: str
+    input_source_dir_path: Path
+    ignore_input_patterns: List[str]
+    main_file: str
+    main_file_path: Path
+    app_dir: str
+    app_dir_path: Path
+    python_dir: str
+    python_dir_path: Path
+    source_dir: str
+    source_dir_path: Path
+    requirements_file: str
+    requirements_file_path: Path
+    extra_pip_install_args: List[str]
+    exe_file: str
+    exe_file_path: Path
+    icon_file_path: Union[Path, None]
+    show_console: bool
+    zip_file_path: Union[Path, None]
+
+```
+
+### Build from `pyproject.toml`
+
+> Not implemented yet, TODO...
 
 ## License
 
