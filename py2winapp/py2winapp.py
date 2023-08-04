@@ -1,11 +1,11 @@
 """py2winapp.
 
-This script is used to create a Windows application from a Python project.
+Make runnable Windows applications from Python projects.
 
 TODO:
-- CLI
 - chore:
     - README.md
+- CLI
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - add default icon
