@@ -3,7 +3,7 @@
 This script is used to create a Windows application from a Python project.
 
 TODO:
-- test if source dir is not a app dir
+- CLI
 - chore:
     - README.md
 - add support for pyproject.toml
@@ -38,12 +38,9 @@ GETPIPPY_URL = "https://bootstrap.pypa.io/get-pip.py"
 GETPIPPY_FILE = "get-pip.py"
 PYTHON_URL = "https://www.python.org/ftp/python"
 
-HEADER_NO_CONSOLE = """import sys, os, pathlib
-if sys.executable.endswith('pythonw.exe'):
-    sys.stdout = open(os.devnull, 'w')
-    sys.stderr = (pathlib.Path(__file__).parent / 'stderr').open('w')
+DEFAULT_STDERR_FILE = "stderr.log"
+DEFAULT_STDOUT_FILE = "stdout.log"
 
-"""
 DEFAULT_IGNORE_PATTERNS = [
     "__pycache__",
     "*.pyc",
@@ -476,6 +473,8 @@ def build(
     logger.info("Installing requirements...")
     _install_requirements_txt_file(build_data=build_data)
 
+    _fix_main_file(build_data=build_data)
+
     logger.info("Generating startup executable...")
     _make_startup_exe(build_data=build_data)
 
@@ -709,17 +708,44 @@ def _make_startup_exe(build_data: BuildData) -> None:
         show_console=build_data.show_console,
     )
 
+
+def _fix_main_file(build_data: BuildData) -> None:
+    header_no_console = None
+    header_cwd = None
     if not build_data.show_console:
-        main_file_path = build_data.main_file_path
-        main_file_content = main_file_path.read_text(
+        stdout_str = "sys.stdout = open(os.devnull, 'w')"
+        stderr_str = f"sys.stderr = (pathlib.Path(__file__).parent / '{DEFAULT_STDERR_FILE}').open('w')"  # noqa
+        header_no_console = (
+            "import sys, os, pathlib\n"
+            "if sys.executable.endswith('pythonw.exe'):\n"
+            f"    sys.stdout = {stdout_str}\n"
+            f"    sys.stderr = {stderr_str}\n\n"
+        )
+
+    if build_data.source_dir_path != build_data.app_dir_path:
+        header_cwd = "import os\n" if header_no_console is None else ""
+        # above is for do not import "os" if it is already imported in header_no_console
+        header_cwd += "os.chdir(os.path.dirname(__file__))\n\n"
+        # header_cwd = f"os.chdir({build_data.source_dir!r})\n\n"
+
+    # insert header to main file
+    if header_no_console is not None or header_cwd is not None:
+        main_file_in_build_dir_path = build_data.source_dir_path / build_data.main_file
+        assert main_file_in_build_dir_path.exists()
+        main_file_content = main_file_in_build_dir_path.read_text(
             encoding="utf8", errors="surrogateescape"
         )
-        if HEADER_NO_CONSOLE not in main_file_content:
-            main_file_path.write_text(
-                str(HEADER_NO_CONSOLE + main_file_content),
-                encoding="utf8",
-                errors="surrogateescape",
-            )
+        header = ""
+        if header_no_console is not None and header_no_console not in main_file_content:
+            logger.debug("Fixing main file to not show console")
+            header += header_no_console
+        if header_cwd is not None and header_cwd not in main_file_content:
+            logger.debug("Fixing main file to set cwd")
+            header += header_cwd
+        logger.debug(f"Writing main file {main_file_in_build_dir_path!r}")
+        main_file_in_build_dir_path.write_text(
+            header + main_file_content, encoding="utf8", errors="surrogateescape"
+        )
 
 
 def _make_zip_file(build_data: BuildData) -> None:
