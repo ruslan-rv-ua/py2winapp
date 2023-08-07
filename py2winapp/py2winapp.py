@@ -5,12 +5,13 @@ Make runnable Windows applications from Python projects.
 TODO:
 - chore:
     - README.md
+    - dpcumentation
 - CLI
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
-- add default icon
 - suppress `get-exe` output
 - x86 Python support
+- obfuscation
 """
 import os
 import re
@@ -418,21 +419,22 @@ def build(
     icon_file: Union[str, Path, None] = None,
     make_dist: bool = True,
 ) -> BuildData:
-    """Build a Windows executable from a Python project.
+    """Build a Windows application from a Python project.
 
     Args:
         python_version (Union[str, None], optional): Python version to use.
-            If None, use current interpreter's version. Defaults to None.
+            If None, use current interpreter's version.
         project_path (Union[str, Path, None], optional): Project's root path.
-            If None, use current working directory. Defaults to None.
+            If None, use current working directory.
         input_source_dir (Union[str, None], optional): Directory where the
             source code is, relative to project root.
-            If None, use project's directory name. Defaults to None.
+            If None, use project's directory name.
         run_as_package (bool, optional): Run the app as a package or not.
-            Defaults to False. If True, the `__main__.py` file must be
+            If True, the `__main__.py` file must be
             in the `input_source_dir` directory.
         main_file (Union[str, None], optional): Relative to input_source_dir,
-            the main file to run. If None, use "main.py". Defaults to None.
+            the main file to run.
+            If None, use "main.py". Defaults to None.
         app_name (Union[str, None], optional): Name of the app.
             If None, use project's directory name. Defaults to None.
         ignore_input_patterns (Iterable[str], optional): Patterns to ignore in

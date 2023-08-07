@@ -1,0 +1,22 @@
+site_name: py2winapp
+
+theme:
+  name: "material"
+  palette:
+    scheme: slate
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            docstring_section_style: spacy # table, list, spacy
+
+
+nav:
+  - index.md
+  - api.md
+  # - how-to-guides.md
+  # - reference.md
+  # - explanation.md
