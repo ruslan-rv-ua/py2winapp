@@ -22,8 +22,6 @@ You'll get a portable Windows application!
 - Tested on Windows 10 only
 - Now only `x64` architecture is supported.
 
-
-
 ## Installation
 
 With `pip`:
@@ -40,7 +38,7 @@ poetry add --group build py2winapp
 
 ## Usage
 
-See [documentation](https://ruslan-rv-ua.github.io/py2winapp/)
+See [documentation]()
 
 ## License
 

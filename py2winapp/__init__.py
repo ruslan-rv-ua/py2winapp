@@ -5,12 +5,14 @@ Usage:
     and call it with the appropriate arguments.
 
 Example:
+    ```
     from py2winapp import build
     build(
         python_version="3.8.5",
         source_dir="src",
         requirements_file="requirements_prod.txt"
     )
+    ```
 """
 from .py2winapp import build  # noqa
 
