@@ -25,6 +25,12 @@ flake8 = "^6.1.0"
 flake8-pyproject = "^1.2.3"
 flake8-pydocstyle = "^0.2.2"
 
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.5.2"
+mkdocs-material = "^9.1.21"
+mkdocstrings = {extras = ["python"], version = "^0.22.0"}
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
