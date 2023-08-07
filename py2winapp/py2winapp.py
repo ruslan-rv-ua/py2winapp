@@ -105,6 +105,7 @@ class BuildData:
     input_source_dir: str
     input_source_dir_path: Path
     ignore_input_patterns: List[str]
+    run_as_package: bool
     main_file: str
     main_file_path: Path
     app_dir: str
@@ -188,12 +189,20 @@ def _check_build_data(build_data: BuildData) -> None:
         )
 
     # check main file
-    if not build_data.main_file_path.exists():
-        logger.error(f"Main file {build_data.main_file_path!r} does not exist.")
-        raise ValueError(f"Main file {build_data.main_file_path!r} not found.")
-    elif not build_data.main_file_path.is_file():
-        logger.error(f"Main file {build_data.main_file_path!r} is not a file.")
-        raise ValueError(f"Main file {build_data.main_file_path!r} is not a file.")
+    if build_data.run_as_package:
+        if not build_data.main_file_path.exists():
+            logger.error(
+                f"Run as package specified but package {build_data.main_file!r} "
+                "does not exist."
+            )
+            raise ValueError(f"Package {build_data.main_file!r} not found.")
+    else:
+        if not build_data.main_file_path.exists():
+            logger.error(f"Main file {build_data.main_file_path!r} does not exist.")
+            raise ValueError(f"Main file {build_data.main_file_path!r} not found.")
+        elif not build_data.main_file_path.is_file():
+            logger.error(f"Main file {build_data.main_file_path!r} is not a file.")
+            raise ValueError(f"Main file {build_data.main_file_path!r} is not a file.")
 
     # check requirements file
     if not build_data.requirements_file_path.exists():
@@ -236,8 +245,9 @@ def _make_build_data(
     project_path: Union[str, Path, None],
     app_name: Union[str, None],
     input_source_dir: Union[str, None],
-    main_file: Union[str, None],
     ignore_input_patterns: List[str],
+    run_as_package: bool,
+    main_file: Union[str, None],
     app_dir: Union[str, None],
     show_console: bool,
     requirements_file: Union[str, None],
@@ -250,7 +260,7 @@ def _make_build_data(
 ) -> BuildData:
     # Python version
     if python_version is None:
-        # user current interpreter's version
+        # use current interpreter's version
         python_version = (
             f"{sys.version_info.major}.{sys.version_info.minor}."
             f"{sys.version_info.micro}"
@@ -280,9 +290,17 @@ def _make_build_data(
     input_source_dir_path = project_path / input_source_dir
 
     # main file
-    if main_file is None:
-        main_file = DEFAULT_MAIN_FILE
-        logger.warning(f"Main file not specified, using default: {main_file!r}.")
+    if run_as_package:
+        if main_file is not None:
+            logger.warning(
+                f"Main file specified, but will be ignored when running as a package: "
+                f"{main_file!r}"
+            )
+        main_file = "__main__.py"
+    else:
+        if main_file is None:
+            main_file = DEFAULT_MAIN_FILE
+            logger.warning(f"Main file not specified, using default: {main_file!r}.")
     main_file_path = input_source_dir_path / main_file
 
     build_dir_path = project_path / DEFAULT_BUILD_DIR
@@ -315,9 +333,17 @@ def _make_build_data(
     python_dir_path = app_dir_path / python_dir
 
     # source dir
-    if source_dir is None:
-        source_dir = DEFAULT_SOURCE_DIR
-        logger.debug(f"Source dir not specified, using default: {source_dir!r}.")
+    if run_as_package:
+        if source_dir is not None:
+            logger.warning(
+                f"Source dir specified, but will be ignored when running as a package: "
+                f"{source_dir!r}"
+            )
+        source_dir = app_name_slug
+    else:
+        if source_dir is None:
+            source_dir = DEFAULT_SOURCE_DIR
+            logger.debug(f"Source dir not specified, using default: {source_dir!r}.")
     source_dir_path = app_dir_path / source_dir
 
     if icon_file is not None:
@@ -348,6 +374,7 @@ def _make_build_data(
         input_source_dir=input_source_dir,
         input_source_dir_path=input_source_dir_path,
         ignore_input_patterns=list(ignore_input_patterns),
+        run_as_package=run_as_package,
         main_file=main_file,
         main_file_path=main_file_path,
         app_dir=app_dir,
@@ -377,9 +404,10 @@ def build(
     python_version: Union[str, None] = None,
     project_path: Union[str, Path, None] = None,
     input_source_dir: Union[str, None] = None,
+    ignore_input_patterns: Iterable[str] = [],
+    run_as_package: bool = False,
     main_file: Union[str, None] = None,
     app_name: Union[str, None] = None,
-    ignore_input_patterns: Iterable[str] = [],
     app_dir: Union[str, None] = None,
     show_console: bool = False,
     requirements_file: str = "requirements.txt",
@@ -400,6 +428,9 @@ def build(
         input_source_dir (Union[str, None], optional): Directory where the
             source code is, relative to project root.
             If None, use project's directory name. Defaults to None.
+        run_as_package (bool, optional): Run the app as a package or not.
+            Defaults to False. If True, the `__main__.py` file must be
+            in the `input_source_dir` directory.
         main_file (Union[str, None], optional): Relative to input_source_dir,
             the main file to run. If None, use "main.py". Defaults to None.
         app_name (Union[str, None], optional): Name of the app.
@@ -434,6 +465,7 @@ def build(
         python_version=python_version,
         project_path=project_path,
         input_source_dir=input_source_dir,
+        run_as_package=run_as_package,
         main_file=main_file,
         app_name=app_name,
         ignore_input_patterns=list(ignore_input_patterns),
@@ -692,15 +724,23 @@ def _make_startup_exe(build_data: BuildData) -> None:
     relative_pydist_dir = build_data.python_dir_path.relative_to(
         build_data.app_dir_path
     )
-    relative_source_dir = build_data.source_dir_path.relative_to(
-        build_data.app_dir_path
-    )
     python_entrypoint = "python.exe" if build_data.show_console else "pythonw.exe"
     logger.debug(f"Python entrypoint: {python_entrypoint!r}")
-    command_str = (
-        f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
-        + f"{{EXE_DIR}}\\{relative_source_dir}\\{build_data.main_file}"
-    )
+
+    if build_data.run_as_package:
+        command_str = (
+            f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
+            f"{build_data.source_dir}"
+        )
+    else:
+        relative_source_dir = build_data.source_dir_path.relative_to(
+            build_data.app_dir_path
+        )
+        command_str = (
+            f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
+            + f"{{EXE_DIR}}\\{relative_source_dir}\\{build_data.main_file}"
+        )
+
     logger.debug(f"Making startup exe file {build_data.exe_file_path!r}")
     generate_exe(
         target=build_data.exe_file_path,
