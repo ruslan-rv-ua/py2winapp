@@ -49,3 +49,4 @@ MIT
 ## Credits
 
 - inspired by [ClimenteA/pyvan](https://github.com/ClimenteA/pyvan#readme)
+- used code from [silvandeleemput/gen-exe](https://github.com/silvandeleemput/gen-exe)

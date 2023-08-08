@@ -250,21 +250,6 @@ TOMLi = {version = "*", markers = "python_version < \"3.11\""}
 dev = ["pyTest", "pyTest-cov"]
 
 [[package]]
-name = "gen-exe"
-version = "0.2.1"
-description = "A small utility which allows you to generate Windows executables that can run custom commands on your Windows system."
-optional = false
-python-versions = "*"
-files = [
-    {file = "gen-exe-0.2.1.tar.gz", hash = "sha256:f02bfe6f8fe123c50320a3ef159d85ffaf2dcd5e80f191e308231f51ec82b015"},
-    {file = "gen_exe-0.2.1-py3-none-any.whl", hash = "sha256:d76215e9d91b0d3788db2000e2000b57e3929607e3eb542f8c5a2eeb97cd9c34"},
-]
-
-[package.dependencies]
-click = "*"
-pywin32 = "*"
-
-[[package]]
 name = "ghp-import"
 version = "2.1.0"
 description = "Copy your docs directly to the gh-pages branch."
@@ -1195,4 +1180,4 @@ dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "28387afbdd4330c736f80464bc81d9301e17af0f2033cca2a71c9460b9017f0d"
+content-hash = "b14355e8e844c72a8e522890aecb5e22e6129310f834dabf095f3b3123dd5e17"
