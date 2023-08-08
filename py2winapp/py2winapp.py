@@ -23,12 +23,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Union
 
-from genexe.generate_exe import generate_exe
 from loguru import logger
 from pip_requirements_parser import RequirementsFile
 from slugify import slugify
 
 from py2winapp.downloader import Dwwnloader
+from py2winapp.generate_exe import generate_exe
 
 ######################################################################
 # constants
