@@ -206,13 +206,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#py2winapp" class="md-nav__link">
-    py2winapp
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#build" class="md-nav__link">
     build()
   </a>
@@ -261,13 +254,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#py2winapp" class="md-nav__link">
-    py2winapp
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#build" class="md-nav__link">
     build()
   </a>
@@ -297,50 +283,7 @@
 
 
 <h1 id="python-api">Python API</h1>
-
-
-<div class="doc doc-object doc-module">
-
-
-<a id="py2winapp"></a>
-  <div class="doc doc-contents first">
-  
-      <p>Convert a Python script into a Windows application.</p>
-
-<details class="usage" open>
-  <summary>Usage</summary>
-  <p>To use this module, simply import the <code>build</code> function from the <code>py2winapp</code> module
-and call it with the appropriate arguments.</p>
-</details>
-<details class="example" open>
-  <summary>Example</summary>
-  <pre><code>from py2winapp import build
-build(
-    python_version=&quot;3.8.5&quot;,
-    source_dir=&quot;src&quot;,
-    requirements_file=&quot;requirements_prod.txt&quot;
-)
-</code></pre>
-</details>
-  
-
-  <div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-  </div>
-
-</div><h2 id="build"><code>build()</code></h2>
+<h2 id="build"><code>build()</code></h2>
 
 
 
@@ -350,7 +293,7 @@ build(
 <a id="py2winapp.build"></a>
   <div class="doc doc-contents first">
   
-      <p>Build a Windows application from a Python project.</p>
+      <p>Build the app.</p>
 
 
 
@@ -446,7 +389,7 @@ in the <code>input_source_dir</code> directory.</p>
             <div class="doc-md-description">
               <p>Relative to input_source_dir,
 the main file to run.
-If None, use "main.py". Defaults to None.</p>
+If None, use "main.py".</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -465,7 +408,7 @@ If None, use "main.py". Defaults to None.</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Name of the app.
-If None, use project's directory name. Defaults to None.</p>
+If None, use project's directory name.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -484,7 +427,7 @@ If None, use project's directory name. Defaults to None.</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Patterns to ignore in
-input_dir. Defaults to [].</p>
+the input source directory.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -502,8 +445,7 @@ input_dir. Defaults to [].</p>
           <td><code>app_dir</code></td>
           <td class="doc-param-details">
             <div class="doc-md-description">
-              <p>Where to put the app under <code>dist</code> directory (relative to project_dir).
-Defaults to None.</p>
+              <p>Where to put the app under <code>dist</code> directory (relative to project_dir).</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -521,8 +463,7 @@ Defaults to None.</p>
           <td><code>show_console</code></td>
           <td class="doc-param-details">
             <div class="doc-md-description">
-              <p>Show console or not when running the app.
-Defaults to False.</p>
+              <p>Show console or not when running the app.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -540,8 +481,7 @@ Defaults to False.</p>
           <td><code>requirements_file</code></td>
           <td class="doc-param-details">
             <div class="doc-md-description">
-              <p>Name of the requirements file.
-Defaults to "requirements.txt".</p>
+              <p>Name of the requirements file.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -560,7 +500,7 @@ Defaults to "requirements.txt".</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Extra args to pass for
-"pip install" command. Defaults to [].</p>
+"pip install" command.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -579,7 +519,7 @@ Defaults to "requirements.txt".</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Where to put python distribution
-files (relative to app_dir). Defaults to DEFAULT_PYDIST_DIR.</p>
+files (relative to app_dir).</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -597,8 +537,7 @@ files (relative to app_dir). Defaults to DEFAULT_PYDIST_DIR.</p>
           <td><code>source_dir</code></td>
           <td class="doc-param-details">
             <div class="doc-md-description">
-              <p>Where to put source files (relative to app_dir).
-Defaults to "".</p>
+              <p>Where to put source files (relative to app_dir).</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -617,7 +556,7 @@ Defaults to "".</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Name of the exe file.
-If None, use app_name_slug. Defaults to None.</p>
+If None, use app_name_slug.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -636,7 +575,7 @@ If None, use app_name_slug. Defaults to None.</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Icon file to use for the app.
-If None, use default icon. Defaults to None.</p>
+If None, use default icon.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -655,7 +594,7 @@ If None, use default icon. Defaults to None.</p>
           <td class="doc-param-details">
             <div class="doc-md-description">
               <p>Make a zip file of the app under <code>dist</code> directory
-or not. Defaults to True.</p>
+or not.</p>
             </div>
             <p>
                 <span class="doc-param-annotation">
@@ -665,6 +604,27 @@ or not. Defaults to True.</p>
                 <span class="doc-param-default">
                   <b>DEFAULT:</b> 
                     <code>True</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>console_log_level</code></td>
+          <td class="doc-param-details">
+            <div class="doc-md-description">
+              <p>Log level for console output.
+If None, no console output.
+Available values: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL".
+Or use int values from 0 to 50.</p>
+            </div>
+            <p>
+                <span class="doc-param-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Union">Union</span>[str, int, None]</code>
+                </span>
+                <span class="doc-param-default">
+                  <b>DEFAULT:</b> 
+                    <code>&#39;INFO&#39;</code>
                 </span>
             </p>
           </td>
