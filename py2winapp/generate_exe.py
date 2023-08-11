@@ -1,5 +1,4 @@
-"""
-This module provides functions for generating executable files on Windows.
+"""This module provides functions for generating executable files on Windows.
 
 Functions:
 - generate_exe: Generates an executable file from a command string and an optional icon file.
@@ -28,8 +27,7 @@ def generate_exe(
     icon_file: Optional[Path] = None,
     show_console: bool = True,
 ):
-    """
-    Generate an executable file from a command string and an optional icon file.
+    """Generate an executable file from a command string and an optional icon file.
 
     Args:
         target (Path): The path to the target executable file.
@@ -113,15 +111,16 @@ class DataStruct(object):
         dtype: Tuple[Tuple[str, ...], str],
         input_stream: Optional[BinaryIO] = None,
     ):
-        """
-        Initialize a new instance of the DataStruct class.
+        """Initialize a new instance of the DataStruct class.
 
         Args:
-        - dtype: A tuple containing two elements:
-            - A tuple of strings representing the names of the fields in the data structure.
-            - A string representing the format of the data structure,
-                as specified by the struct module.
-        - input_stream: An optional binary input stream to read the data from.
+            dtype: A tuple of the form (field_names, data_types), where
+                field_names is a tuple of strings representing the names of the fields
+                in the data structure, and data_types is a string representing the
+                data types of the fields in the data structure.
+            input_stream: An optional input stream from which to read the data
+                structure. If None, the data structure will be initialized to all
+                zeros.
 
         Returns:
             - None.
@@ -141,35 +140,33 @@ class DataStruct(object):
         )
 
     def __getattr__(self, name: str) -> Any:
-        """
-        Retrieve the value of the specified attribute.
+        """Retrieve the value of the specified attribute.
 
         Args:
-        - name: A string representing the name of the attribute to retrieve.
+            name: A string representing the name of the attribute to retrieve.
 
         Returns:
-        - The value of the specified attribute, if it exists.
+            The value of the specified attribute, if it exists.
 
         Raises:
-        - AttributeError: If the specified attribute does not exist.
+            AttributeError: If the specified attribute does not exist.
         """
         if name in self._field_names:
             return self._data[self._indices[name]]
         return self.__dict__[name]
 
     def __setattr__(self, name: str, value: Any):
-        """
-        Set the value of the specified attribute.
+        """Set the value of the specified attribute.
 
         Args:
-        - name: A string representing the name of the attribute to set.
-        - value: The value to set the attribute to.
+            name: A string representing the name of the attribute to set.
+            value: The value to set the attribute to.
 
         Returns:
-        - None.
+            None.
 
         Raises:
-        - AttributeError: If the specified attribute does not exist.
+            AttributeError: If the specified attribute does not exist.
         """
         if name in self._field_names:
             self._data[self._indices[name]] = value
@@ -189,17 +186,13 @@ class Icon(object):
     """Class to extract the relevant data from a .ico file."""
 
     def __init__(self, file_name: Path):
-        """
-        Initialize an Icon object by reading the specified icon file.
+        """Initialize an Icon object by reading the specified icon file.
 
         Args:
-        - file_name: A Path object representing the path to the icon file.
+            file_name: A Path object representing the path to the icon file.
 
         Returns:
-        - None.
-
-        Raises:
-        - None.
+            None.
         """
         with open(str(file_name), "rb") as f:
             self._header = DataStruct(dtype=ICONDIRHEADER, input_stream=f)
@@ -225,19 +218,18 @@ class Icon(object):
 
 
 def add_icon_to_exe(source_icon_file: Path, target_exe_file: Path):
-    """
-    Add an icon to a Windows executable file.
+    """Add an icon to a Windows executable file.
 
     Args:
-    - source_icon_file: A Path object representing the path to the icon file.
-    - target_exe_file: A Path object representing the path to the executable file.
+        source_icon_file: A Path object representing the path to the icon file.
+        target_exe_file: A Path object representing the path to the executable file.
 
     Returns:
-    - None.
+        None.
 
     Raises:
-    - FileNotFoundError: If either the source icon file or the target executable file
-      could not be found or is not a valid file.
+        FileNotFoundError: If either the source icon file or the target executable file
+            could not be found or is not a valid file.
     """
     logger.debug(f"Adding icon to {target_exe_file!r}")
     logger.debug(f"Icon file: {source_icon_file!r}")

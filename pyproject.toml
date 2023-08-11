@@ -18,12 +18,9 @@ pywin32 = "^306"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
 mypy = "^1.4.1"
 pre-commit = "^3.3.3"
-flake8 = "^6.1.0"
-flake8-pyproject = "^1.2.3"
-flake8-pydocstyle = "^0.2.2"
+black = "^23.7.0"
 
 
 [tool.poetry.group.docs.dependencies]
@@ -70,17 +67,26 @@ exclude = [
     "py2winapp/__init__.py",
 ]
 
-# isort configs
-[tool.isort]
-line_length = 100
+##################################################
 
-# flake8 configs
-[tool.flake8]
-# ignore = ['E231', 'E241']
-# per-file-ignores = [
-#     '__init__.py:F401',
-# ]
-max-line-length = 100
-count = true
-# [DAR]
-# ignore = DAR201
+[tool.ruff]
+src = ["py2winapp"]
+
+line-length = 100
+target-version = "py39"
+
+ignore-init-module-imports = true
+
+select = ["D"]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fix = true
+fixable = ["ALL"]
+unfixable = []
+
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.pydocstyle]
+convention = "google"

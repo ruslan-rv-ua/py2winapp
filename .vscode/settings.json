@@ -1,6 +1,6 @@
 {
     "python.analysis.typeCheckingMode": "basic",
-    "python.linting.mypyEnabled": false,
-    "python.linting.enabled": true,
-    "python.linting.flake8Enabled": true
+    "editor.codeActionsOnSave": {
+        "source.fixAll": true
+    },
 }
