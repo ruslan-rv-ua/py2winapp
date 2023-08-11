@@ -1,0 +1,92 @@
+[tool.poetry]
+name = "py2winapp"
+version = "0.1.0"
+description = "Make runnable apps from your python scripts!"
+authors = ["Ruslan Iskov <ruslan.rv.ua@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry_bumpversion.file."py2winapp/__init__.py"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.31.0"
+python-slugify = "^8.0.1"
+pip-requirements-parser = "^32.0.1"
+loguru = "^0.7.0"
+pywin32 = "^306"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+pre-commit = "^3.3.3"
+black = "^23.7.0"
+
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.5.2"
+mkdocs-material = "^9.1.21"
+mkdocstrings = {extras = ["python"], version = "^0.22.0"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+/(
+        \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.nox
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
+
+# mypy configs
+[tool.mypy]
+python_version = "3.9"
+mypy_path = "py2winapp"
+exclude = [
+    "build",
+    "dist",
+    "docs",
+    "examples",
+    "scripts",
+    "tests",
+    ".venv",
+    "py2winapp/__init__.py",
+]
+
+##################################################
+
+[tool.ruff]
+src = ["py2winapp"]
+
+line-length = 100
+target-version = "py39"
+
+ignore-init-module-imports = true
+
+select = ["D"]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fix = true
+fixable = ["ALL"]
+unfixable = []
+
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.pydocstyle]
+convention = "google"
