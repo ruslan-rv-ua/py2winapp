@@ -1,14 +1,10 @@
 """Make runnable Windows applications from Python projects.
 
 Todo:
-- chore:
-    - README.md
-    - documentation
 - CLI
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - x86 Python support
-- obfuscation?
 
 """
 import os
