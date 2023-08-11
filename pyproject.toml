@@ -36,7 +36,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
-line-length = 88
+line-length = 100
 target-version = ['py310']
 include = '\.pyi?$'
 exclude = '''
@@ -72,7 +72,7 @@ exclude = [
 
 # isort configs
 [tool.isort]
-line_length = 88
+line_length = 100
 
 # flake8 configs
 [tool.flake8]
@@ -80,7 +80,7 @@ line_length = 88
 # per-file-ignores = [
 #     '__init__.py:F401',
 # ]
-max-line-length = 88
+max-line-length = 100
 count = true
 # [DAR]
 # ignore = DAR201
