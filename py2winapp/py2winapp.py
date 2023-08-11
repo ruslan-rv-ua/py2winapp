@@ -1,6 +1,4 @@
-"""py2winapp.
-
-Make runnable Windows applications from Python projects.
+"""Make runnable Windows applications from Python projects.
 
 TODO:
 - chore:
@@ -10,7 +8,7 @@ TODO:
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
 - x86 Python support
-- obfuscation
+- obfuscation?
 """
 import os
 import re
@@ -59,31 +57,6 @@ DEFAULT_LOG_FILE = "py2winapp.log"
 
 DEFAULT_PYDIST_DIR = "python"
 DEFAULT_SOURCE_DIR = "."
-
-
-######################################################################
-# Logging
-######################################################################
-
-
-def _setup_logger() -> int:
-    log_file_path = Path.cwd() / DEFAULT_LOG_FILE
-    if log_file_path.exists():
-        log_file_path.unlink()
-    logger.remove(0)
-    logger.add(
-        log_file_path,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level:10} | {message}",
-        level="DEBUG",
-        enqueue=True,
-    )
-    logger.add(
-        sys.stderr,
-        format="<level>{level:10}: {message}</level>",
-        level="INFO",
-        colorize=True,
-    )
-    return 0
 
 
 ######################################################################
@@ -389,6 +362,7 @@ def build(
     exe_file: Union[str, None] = None,
     icon_file: Union[str, Path, None] = None,
     make_dist: bool = True,
+    console_log_level: Union[str, int, None] = "INFO",
 ) -> BuildData:
     """Build a Windows application from a Python project.
 
@@ -409,7 +383,7 @@ def build(
         app_name (Union[str, None], optional): Name of the app.
             If None, use project's directory name.
         ignore_input_patterns (Iterable[str], optional): Patterns to ignore in
-            input_dir.
+            the input source directory.
         app_dir (Union[str, None], optional):
             Where to put the app under `dist` directory (relative to project_dir).
         show_console (bool, optional): Show console or not when running the app.
@@ -425,10 +399,16 @@ def build(
             If None, use default icon.
         make_dist (bool, optional): Make a zip file of the app under `dist` directory
             or not.
+        console_log_level (Union[str, int, None], optional): Log level for console output.
+            If None, no console output.
+            Available values: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL".
+            Or use int values from 0 to 50.
 
     Returns:
         BuildData: A data object containing information about the build process.
     """
+    _setup_logger(console_log_level=console_log_level)
+
     logger.info("Collecting build data...")
     build_data = _make_build_data(
         python_version=python_version,
@@ -817,4 +797,44 @@ def _execute_os_command(command: str, cwd: Union[str, None] = None) -> str:
         raise Exception(command, exit_code, output)
 
 
-_setup_logger()
+######################################################################
+# Logging
+######################################################################
+LOG_LEVELS = {
+    "TRACE": 5,
+    "DEBUG": 10,
+    "INFO": 20,
+    "SUCCESS": 25,
+    "WARNING": 30,
+    "ERROR": 40,
+    "CRITICAL": 50,
+}
+
+
+def _setup_logger(console_log_level: Union[str, int, None]) -> None:
+    log_file_path = Path.cwd() / DEFAULT_LOG_FILE
+    if log_file_path.exists():
+        log_file_path.unlink()
+    logger.remove(0)
+    logger.add(
+        log_file_path,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level:10} | {message}",
+        level="DEBUG",
+        enqueue=True,
+    )
+    if console_log_level is None:
+        return
+    if isinstance(console_log_level, str):
+        console_log_level = console_log_level.upper()
+        if console_log_level not in LOG_LEVELS:
+            raise ValueError(
+                f"Invalid console log level {console_log_level!r}. "
+                f"Valid values are: {', '.join(LOG_LEVELS)}"
+            )
+        console_log_level = LOG_LEVELS[console_log_level]
+    logger.add(
+        sys.stderr,
+        format="<level>{level:>10} {message}</level>",
+        level=console_log_level,
+        colorize=True,
+    )
