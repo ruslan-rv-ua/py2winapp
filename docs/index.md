@@ -32,13 +32,9 @@ pip install py2winapp
 
 With `poetry`:
 
-```sh
-poetry add --group build py2winapp
+```bash
+poetry add py2winapp --group dev
 ```
-
-## Usage
-
-See [documentation]()
 
 ## License
 
@@ -47,3 +43,4 @@ MIT
 ## Credits
 
 - inspired by [ClimenteA/pyvan](https://github.com/ClimenteA/pyvan#readme)
+- used code from [silvandeleemput/gen-exe](https://github.com/silvandeleemput/gen-exe)

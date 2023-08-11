@@ -365,7 +365,7 @@ def build(
     make_dist: bool = True,
     console_log_level: Union[str, int, None] = "INFO",
 ) -> BuildData:
-    """Build a Windows application from a Python project.
+    """Build the app.
 
     Args:
         python_version (Union[str, None], optional): Python version to use.
