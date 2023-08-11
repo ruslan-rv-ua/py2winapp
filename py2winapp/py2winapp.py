@@ -1,6 +1,6 @@
 """Make runnable Windows applications from Python projects.
 
-TODO:
+Todo:
 - chore:
     - README.md
     - documentation
@@ -9,6 +9,7 @@ TODO:
 - make app_dir and exe file name patterns configurable
 - x86 Python support
 - obfuscation?
+
 """
 import os
 import re
@@ -737,8 +738,7 @@ def _make_zip_file(build_data: BuildData) -> None:
 
 
 def _unzip(zip_file_path: Path, destination_dir_path: Path) -> None:
-    """
-    Extract all files from a zip archive to a destination directory.
+    """Extract all files from a zip archive to a destination directory.
 
     Args:
         zip_file_path (Path): The path to the zip archive to extract.

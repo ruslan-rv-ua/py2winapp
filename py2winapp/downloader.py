@@ -10,8 +10,7 @@ class Dwwnloader:
     """Class for downloading files from a given URL to a local file path."""
 
     def __init__(self, download_dir_path: Path):
-        """
-        Initialize the Downloader object.
+        """Initialize the Downloader object.
 
         Args:
             download_dir_path (Path): The path to the directory
@@ -22,8 +21,7 @@ class Dwwnloader:
         self._download_dir_path = download_dir_path
 
     def download(self, url: str, file: str) -> Path:
-        """
-        Download a file from a given URL and save it to a local file path.
+        """Download a file from a given URL and save it to a local file path.
 
         It will check if the file is already downloaded and cached. If so, it will
         return the cached file path. Otherwise, it will download the file and save it
@@ -45,8 +43,7 @@ class Dwwnloader:
         return file_path
 
     def _download_file(self, url: str, local_file_path: Path, chunk_size: int = 128) -> None:
-        """
-        Download a file from a given URL and save it to a local file path.
+        """Download a file from a given URL and save it to a local file path.
 
         Args:
             url (str): The URL of the file to download.
