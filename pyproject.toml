@@ -18,12 +18,8 @@ pywin32 = "^306"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
 mypy = "^1.4.1"
 pre-commit = "^3.3.3"
-flake8 = "^6.1.0"
-flake8-pyproject = "^1.2.3"
-flake8-pydocstyle = "^0.2.2"
 
 
 [tool.poetry.group.docs.dependencies]
