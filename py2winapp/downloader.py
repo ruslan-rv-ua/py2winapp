@@ -44,9 +44,7 @@ class Dwwnloader:
         self._download_file(url, file_path)
         return file_path
 
-    def _download_file(
-        self, url: str, local_file_path: Path, chunk_size: int = 128
-    ) -> None:
+    def _download_file(self, url: str, local_file_path: Path, chunk_size: int = 128) -> None:
         """
         Download a file from a given URL and save it to a local file path.
 

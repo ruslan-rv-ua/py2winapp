@@ -5,11 +5,10 @@ Make runnable Windows applications from Python projects.
 TODO:
 - chore:
     - README.md
-    - dpcumentation
+    - documentation
 - CLI
 - add support for pyproject.toml
 - make app_dir and exe file name patterns configurable
-- suppress `get-exe` output
 - x86 Python support
 - obfuscation
 """
@@ -159,9 +158,7 @@ def _check_build_data(build_data: BuildData) -> None:
             "does not have the correct format, "
             'it should be of format: "x.x.x" where "x" is a positive number.'
         )
-        raise ValueError(
-            f"Invalid python version specified: {build_data.python_version}"
-        )
+        raise ValueError(f"Invalid python version specified: {build_data.python_version}")
 
     # check project path
     if not build_data.project_path.exists():
@@ -169,22 +166,14 @@ def _check_build_data(build_data: BuildData) -> None:
         raise ValueError(f"Project path {build_data.project_path!r} not found.")
     elif not build_data.project_path.is_dir():
         logger.error(f"Project path {build_data.project_path!r} is not a directory.")
-        raise ValueError(
-            f"Project path {build_data.project_path!r} is not a directory."
-        )
+        raise ValueError(f"Project path {build_data.project_path!r} is not a directory.")
 
     # check input source dir
     if not build_data.input_source_dir_path.exists():
-        logger.error(
-            f"Input source dir {build_data.input_source_dir_path!r} does not exist."
-        )
-        raise ValueError(
-            f"Input source dir {build_data.input_source_dir_path!r} not found."
-        )
+        logger.error(f"Input source dir {build_data.input_source_dir_path!r} does not exist.")
+        raise ValueError(f"Input source dir {build_data.input_source_dir_path!r} not found.")
     elif not build_data.input_source_dir_path.is_dir():
-        logger.error(
-            f"Input source dir {build_data.input_source_dir_path!r} is not a directory."
-        )
+        logger.error(f"Input source dir {build_data.input_source_dir_path!r} is not a directory.")
         raise ValueError(
             f"Input source dir {build_data.input_source_dir_path!r} is not a directory."
         )
@@ -193,8 +182,7 @@ def _check_build_data(build_data: BuildData) -> None:
     if build_data.run_as_package:
         if not build_data.main_file_path.exists():
             logger.error(
-                f"Run as package specified but package {build_data.main_file!r} "
-                "does not exist."
+                f"Run as package specified but package {build_data.main_file!r} " "does not exist."
             )
             raise ValueError(f"Package {build_data.main_file!r} not found.")
     else:
@@ -207,23 +195,16 @@ def _check_build_data(build_data: BuildData) -> None:
 
     # check requirements file
     if not build_data.requirements_file_path.exists():
-        logger.error(
-            f"Requirements file {build_data.requirements_file_path!r} does not exist."
-        )
-        raise ValueError(
-            f"Requirements file {build_data.requirements_file_path!r} not found."
-        )
+        logger.error(f"Requirements file {build_data.requirements_file_path!r} does not exist.")
+        raise ValueError(f"Requirements file {build_data.requirements_file_path!r} not found.")
     else:
         req_checker = RequirementsFile.from_file(str(build_data.requirements_file_path))
         if req_checker.invalid_lines:
             for line in req_checker.invalid_lines:
-                logger.error(
-                    f"Error in requirements file: {line.filename}:{line.line_number}"
-                )
+                logger.error(f"Error in requirements file: {line.filename}:{line.line_number}")
                 logger.error(line.error_message)
             raise ValueError(
-                f"Requirements file {build_data.requirements_file_path!r} "
-                "contains errors."
+                f"Requirements file {build_data.requirements_file_path!r} " "contains errors."
             )
 
     # check icon file
@@ -263,8 +244,7 @@ def _make_build_data(
     if python_version is None:
         # use current interpreter's version
         python_version = (
-            f"{sys.version_info.major}.{sys.version_info.minor}."
-            f"{sys.version_info.micro}"
+            f"{sys.version_info.major}.{sys.version_info.minor}." f"{sys.version_info.micro}"
         )
         logger.warning(
             f"Python version not specified, using current interpreter's version: "
@@ -275,19 +255,14 @@ def _make_build_data(
     if project_path is None:
         project_path = Path.cwd()
         logger.warning(
-            f"Project path not specified, using current working directory: "
-            f"{project_path!r}"
+            f"Project path not specified, using current working directory: " f"{project_path!r}"
         )
     project_path = Path(project_path).resolve()
 
     # input source dir
     if input_source_dir is None:
-        input_source_dir = project_path.name.replace(
-            "-", "_"
-        )  # use project name with underscores
-        logger.warning(
-            f"Input source dir not specified, using project name: {input_source_dir!r}."
-        )
+        input_source_dir = project_path.name.replace("-", "_")  # use project name with underscores
+        logger.warning(f"Input source dir not specified, using project name: {input_source_dir!r}.")
     input_source_dir_path = project_path / input_source_dir
 
     # main file
@@ -322,9 +297,7 @@ def _make_build_data(
     # requirements file
     if requirements_file is None:
         requirements_file = DEFAULT_REQUIREMENTS_FILE
-        logger.debug(
-            f"Requirements file not specified, using default: {requirements_file!r}."
-        )
+        logger.debug(f"Requirements file not specified, using default: {requirements_file!r}.")
     requirements_file_path = project_path / requirements_file
 
     # python dir
@@ -356,9 +329,7 @@ def _make_build_data(
 
     if exe_file is None:
         exe_file = f"{app_name_slug}.exe"
-        logger.info(
-            f"Executable file name not specified, using app name slug: {exe_file!r}."
-        )
+        logger.info(f"Executable file name not specified, using app name slug: {exe_file!r}.")
     else:
         exe_file = exe_file.strip().lower()
         if not exe_file.endswith(".exe"):
@@ -434,30 +405,26 @@ def build(
             in the `input_source_dir` directory.
         main_file (Union[str, None], optional): Relative to input_source_dir,
             the main file to run.
-            If None, use "main.py". Defaults to None.
+            If None, use "main.py".
         app_name (Union[str, None], optional): Name of the app.
-            If None, use project's directory name. Defaults to None.
+            If None, use project's directory name.
         ignore_input_patterns (Iterable[str], optional): Patterns to ignore in
-            input_dir. Defaults to [].
+            input_dir.
         app_dir (Union[str, None], optional):
             Where to put the app under `dist` directory (relative to project_dir).
-            Defaults to None.
         show_console (bool, optional): Show console or not when running the app.
-            Defaults to False.
         requirements_file (str, optional): Name of the requirements file.
-            Defaults to "requirements.txt".
         extra_pip_install_args (List[str], optional): Extra args to pass for
-            "pip install" command. Defaults to [].
+            "pip install" command.
         python_dir (str, optional): Where to put python distribution
-            files (relative to app_dir). Defaults to DEFAULT_PYDIST_DIR.
+            files (relative to app_dir).
         source_dir (str, optional): Where to put source files (relative to app_dir).
-            Defaults to "".
         exe_file (Union[str, None], optional): Name of the exe file.
-            If None, use app_name_slug. Defaults to None.
+            If None, use app_name_slug.
         icon_file (Union[str, Path, None], optional): Icon file to use for the app.
-            If None, use default icon. Defaults to None.
+            If None, use default icon.
         make_dist (bool, optional): Make a zip file of the app under `dist` directory
-            or not. Defaults to True.
+            or not.
 
     Returns:
         BuildData: A data object containing information about the build process.
@@ -571,9 +538,7 @@ def _get_python_dist(build_data: BuildData) -> None:
     )
 
     # extract python zip file to build folder
-    logger.debug(
-        f"Extracting {downloaded_python_zip_path!r} to {build_data.python_dir_path!r}"
-    )
+    logger.debug(f"Extracting {downloaded_python_zip_path!r} to {build_data.python_dir_path!r}")
     _unzip(
         zip_file_path=downloaded_python_zip_path,
         destination_dir_path=build_data.python_dir_path,
@@ -610,9 +575,7 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
     Returns:
         None
     """
-    short_python_version = "".join(
-        build_data.python_version.split(".")[:2]
-    )  # "3.9.7" -> "39"
+    short_python_version = "".join(build_data.python_version.split(".")[:2])  # "3.9.7" -> "39"
     pth_file = f"python{short_python_version}._pth"  # python39._pth
     pythonzip_file = f"python{short_python_version}.zip"  # python39.zip
 
@@ -637,9 +600,7 @@ def prepare_for_pip_install(build_data: BuildData) -> None:
 
     pythonzip_dir_path = Path(pythonzip_file_path)
     logger.debug(f"Extracting {pythonzip_file_path!r} to {pythonzip_dir_path!r}")
-    pythonzip_file_path = pythonzip_file_path.rename(
-        pythonzip_file_path.with_suffix(".temp_zip")
-    )
+    pythonzip_file_path = pythonzip_file_path.rename(pythonzip_file_path.with_suffix(".temp_zip"))
     _unzip(pythonzip_file_path, pythonzip_dir_path)
     pythonzip_file_path.unlink()
 
@@ -657,9 +618,7 @@ def _install_requirements_txt_file(build_data: BuildData) -> None:
     logger.debug(f"Requirements file path: {build_data.requirements_file_path!r}")
 
     if build_data.extra_pip_install_args:
-        extra_args_str = extra_args_str = " " + " ".join(
-            build_data.extra_pip_install_args
-        )
+        extra_args_str = extra_args_str = " " + " ".join(build_data.extra_pip_install_args)
     else:
         extra_args_str = ""
     scripts_dir_path = build_data.python_dir_path / "Scripts"
@@ -673,9 +632,7 @@ def _install_requirements_txt_file(build_data: BuildData) -> None:
     except Exception as e:
         error_message = str(e)
     logger.error(error_message)
-    logger.error(
-        f"Failed to install requirements from {build_data.requirements_file_path!r}. "
-    )
+    logger.error(f"Failed to install requirements from {build_data.requirements_file_path!r}. ")
 
     # try to install requirements one by one
     """ #!
@@ -691,9 +648,7 @@ def _install_requirements_txt_file(build_data: BuildData) -> None:
 def _install_requirements_txt_1by1(build_data: BuildData) -> None:
     requirements = build_data.requirements_file_path.read_text().splitlines()
     if build_data.extra_pip_install_args:
-        extra_args_str = extra_args_str = " " + " ".join(
-            build_data.extra_pip_install_args
-        )
+        extra_args_str = extra_args_str = " " + " ".join(build_data.extra_pip_install_args)
     else:
         extra_args_str = ""
     scripts_dir_path = build_data.python_dir_path / "Scripts"
@@ -703,8 +658,7 @@ def _install_requirements_txt_1by1(build_data: BuildData) -> None:
         if not module or module.startswith("#"):
             continue
         command = (
-            "pip3.exe install --no-cache-dir --no-warn-script-location "
-            f"{module}{extra_args_str}"
+            "pip3.exe install --no-cache-dir --no-warn-script-location " f"{module}{extra_args_str}"
         )
         try:
             _execute_os_command(command=command, cwd=str(scripts_dir_path))
@@ -723,21 +677,16 @@ def _install_requirements_txt_1by1(build_data: BuildData) -> None:
 
 
 def _make_startup_exe(build_data: BuildData) -> None:
-    relative_pydist_dir = build_data.python_dir_path.relative_to(
-        build_data.app_dir_path
-    )
+    relative_pydist_dir = build_data.python_dir_path.relative_to(build_data.app_dir_path)
     python_entrypoint = "python.exe" if build_data.show_console else "pythonw.exe"
     logger.debug(f"Python entrypoint: {python_entrypoint!r}")
 
     if build_data.run_as_package:
         command_str = (
-            f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
-            f"{build_data.source_dir}"
+            f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} " f"{build_data.source_dir}"
         )
     else:
-        relative_source_dir = build_data.source_dir_path.relative_to(
-            build_data.app_dir_path
-        )
+        relative_source_dir = build_data.source_dir_path.relative_to(build_data.app_dir_path)
         command_str = (
             f"{{EXE_DIR}}\\{relative_pydist_dir}\\{python_entrypoint} "
             + f"{{EXE_DIR}}\\{relative_source_dir}\\{build_data.main_file}"
